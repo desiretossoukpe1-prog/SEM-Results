@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SEM Results Writer</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#1d2433;--mut:#5d6679;--line:#d9deea;--pri:#2f4fb3;--warn:#fff3cd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171f;--card:#1e222d;--ink:#e8ebf4;--mut:#9aa3b8;--line:#343b4d;--pri:#7d9bff;--warn:#4a3f17;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171f;--card:#1e222d;--ink:#e8ebf4;--mut:#9aa3b8;--line:#343b4d;--pri:#7d9bff;--warn:#4a3f17;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:18px}
+h1{margin:4px 0}.sub{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+label{display:block;font-weight:600;font-size:.9rem;margin:10px 0 4px}
+select,input,textarea{width:100%;box-sizing:border-box;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
+textarea{min-height:220px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:600px){.g{grid-template-columns:1fr}}
+button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 16px;cursor:pointer}
+button.p{background:var(--pri);color:#fff;border-color:var(--pri)}button:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+#warn{background:var(--warn);padding:10px;border-radius:8px;margin-bottom:12px}
+#res h2,#res h3,#res h4,#res h5{margin:18px 0 6px}#res p{margin:8px 0}
+.sc{overflow-x:auto;margin:10px 0}table{border-collapse:collapse;min-width:60%}
+th,td{padding:5px 12px;text-align:left}th{border-top:2px solid var(--ink);border-bottom:1px solid var(--ink)}tr:last-child td{border-bottom:2px solid var(--ink)}
+small{color:var(--mut)}
+.svgw{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:10px}#dg{display:block;max-width:none}.ed{cursor:pointer}.ed:hover{fill:#2f4fb3}
+</style></head><body><main>
+<h1>SEM Results Writer</h1>
+<p class="sub">Paste your CFA/SEM software output and get a Results section drafted to the Ahn reporting guidelines (Oct 2026).</p>
+<div id="warn" hidden>This tool needs Claude access, which isn’t available in this view. Open it from your claude.ai artifact link while signed in.</div>
+<div class="card">
+<div class="g">
+<div><label for="type">Analysis type</label><select id="type"><option>CFA only</option><option selected>SEM (measurement + structural)</option><option>SEM with mediation</option><option>Multiple-group SEM</option><option>CFA with measurement invariance</option></select></div>
+<div><label for="sw">Software</label><select id="sw"><option>Mplus</option><option>lavaan (R)</option><option>Stata</option><option>AMOS</option><option>Other</option></select></div>
+<div><label for="n">Sample size (optional)</label><input id="n" placeholder="e.g., 1,250 teachers"></div>
+<div><label for="est">Estimator / missing data (optional)</label><input id="est" placeholder="e.g., MLR with FIML"></div>
+<div><label for="lvl">Technical level</label><select id="lvl"><option value="tech" selected>Highly technical (journal-ready)</option><option value="std">Standard</option><option value="plain">Plain-language</option></select></div>
+</div>
+<label for="var">Predictor(s), outcome(s), mediator(s) and factor topics (optional)</label>
+<input id="var" placeholder="e.g., Predictor: leadership; Mediator: self-efficacy; Outcome: job satisfaction">
+<label for="ref">Reference article or example (optional)</label><textarea id="ref" style="min-height:110px" placeholder="Paste the text of an article you want the draft to follow for terminology, reporting order and citations (for example, a methods article or a published Results section). Or load a .txt/.md file below."></textarea><input type="file" id="reff" accept=".txt,.md" style="margin-top:6px">
+<label for="raw">Paste your output here</label>
+<textarea id="raw" placeholder="Paste model fit, standardized loadings (STDYX), factor correlations, regression paths, indirect effects, R-square, etc."></textarea>
+<div class="row"><button class="p" id="go">Generate results section</button><button id="stop" hidden>Stop</button><small id="stat"></small></div>
+<small>Tip: include the whole output. The more of it you paste, the fewer “[not provided]” flags you’ll get. Anything missing is flagged instead of invented.</small>
+</div>
+<div class="card" id="outcard" hidden><div class="row" style="margin:0 0 8px"><button id="copy">Copy</button><button id="dl" hidden>Download .md</button></div><div id="res"></div></div>
+<div class="card"><h3 style="margin:0 0 4px">Path diagram (editable)</h3><small>Builds a standardized path diagram from the output you pasted above.</small>
+<div class="row"><button class="p" id="dd">Draw diagram from output</button><small id="dstat"></small></div>
+<div id="dwrap" hidden><div class="row"><button id="al">+ Factor</button><button id="ai">+ Indicator</button><button id="cp">Connect: path</button><button id="cc">Connect: correlation</button><button id="rl">Re-layout</button><button id="dsv">Download SVG</button></div>
+<div id="edbox" class="row" hidden><small id="edl"></small><input id="ed" style="max-width:220px"><button id="ap">Apply</button><button id="del">Delete</button></div>
+<div class="svgw"><svg id="dg" xmlns="http://www.w3.org/2000/svg"></svg></div></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function md(t){const L=t.split("\n");let h="",i=0;const inl=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>");
+ while(i<L.length){const l=L[i];
+  if(/^\s*\|/.test(l)){const rows=[];while(i<L.length&&/^\s*\|/.test(L[i])){rows.push(L[i]);i++}
+   const cells=r=>r.trim().replace(/^\||\|$/g,"").split("|").map(c=>c.trim());
+   const body=rows.filter(r=>!/^\s*\|[\s:|-]+\|\s*$/.test(r));
+   h+="<div class=sc><table>"+body.map((r,k)=>"<tr>"+cells(r).map(c=>"<"+(k?"td":"th")+">"+inl(c)+"</"+(k?"td":"th")+">").join("")+"</tr>").join("")+"</table></div>";continue}
+  const m=l.match(/^(#{1,4})\s+(.*)/);
+  if(m)h+="<h"+(m[1].length+1)+">"+inl(m[2])+"</h"+(m[1].length+1)+">";else if(l.trim())h+="<p>"+inl(l)+"</p>";
+  i++}return h}
+
+const GUIDE=`You are an expert quantitative methodologist helping a researcher write the RESULTS section of a CFA/SEM paper. Follow these reporting guidelines (Ahn, University of Arizona; drawing on Kline, 2016 and Hu & Bentler, 1999). Write in APA 7 style, PAST TENSE, in the researcher's voice ("the model was...", "we found..."). Paraphrase; do not quote sources.
+
+NEVER invent numbers. Use only values in the pasted output. If something the guidelines require is missing from the output, write a bracketed placeholder like [not provided: CFI] and list it under "Items to add" at the end.
+
+STRUCTURE (include only parts that apply to the analysis type):
+1. Model identification: state whether the model was identified and why (df >= 0, convergence, no warnings). Check for unreasonable estimates even without warnings (negative residual variances/Heywood cases, standardized loadings > 1, correlations > 1) and flag any you see.
+2. Model fit: report chi-square with df and p, plus RMSEA (with 90% CI if given), CFI, TLI, SRMR. Judge fit against Hu & Bentler (1999) cutoffs: CFI/TLI >= .95, RMSEA <= .06, SRMR <= .08 (say "adequate" or "not adequate" for each and overall). Do not rely on chi-square alone.
+3. Factor naming: name each latent factor and justify the name from the indicator content (use item wording if provided; otherwise use placeholders for the researcher to fill in).
+4. Factor loadings: an APA 7 style table (markdown) of STANDARDIZED loadings by factor, plus factor covariances/correlations. Discuss item reliability (standardized loadings; treat >= .50-.70 as adequate and name the cutoff you apply; flag weak items; mention squared loadings if useful).
+5. Factor discriminant validity: report the factor correlations that support the conclusion (e.g., correlations well below .85; if possible compare against square-root AVE if derivable) and state the cutoff.
+6. Factor internal reliability: McDonald's omega per factor (NOT Cronbach's alpha). If omega is not in the output but standardized loadings are, compute it as (sum of loadings)^2 / ((sum of loadings)^2 + sum of residual variances) and say it was computed from standardized loadings; show values in a table.
+7. (SEM) Structural model: fit of the full model, standardized regression coefficients (with SE/CI/p if given), R-square, and a plain-language interpretation of each path, e.g. "A one standard deviation increase in [predictor] was associated with a [beta] standard deviation increase/decrease in [outcome]." Describe what a path diagram should contain (standardized loadings, standardized paths, disturbances) and note that the researcher must draw it.
+8. (Mediation) Focus on the MAGNITUDE of indirect effects, not just significance. Report direct, indirect, total effects and compute proportion mediated = indirect / total (and say how much mediation replaces the direct effect).
+9. Emphasize effect sizes over statistical significance throughout.
+10. (Multiple-group / invariance) Describe the sequence tested (configural first, then added equality constraints), compare nested models with change in CFI/RMSEA/chi-square if provided, and note that equality constraints apply to unstandardized estimates so STDYX values differ across groups, that standardized coefficients generally should not be compared across groups, and that Cohen's f2 is an alternative effect-size measure.
+
+END with two short lists: "Items to add" (missing information) and "Things to double-check" (anomalies, warnings, small samples, nesting not addressed, etc.).
+Use markdown headings and markdown tables. Be concise and accurate.`;
+
+const STYLE={tech:"WRITING STYLE: Highly technical, journal-ready quantitative prose for methodologically literate reviewers. Use precise statistical terminology wherever the pasted output supports it, for example: robust maximum likelihood (MLR) or WLSMV, Satorra-Bentler scaled chi-square (scaling correction factor), degrees of freedom, comparative fit index (CFI), Tucker-Lewis index (TLI), root mean square error of approximation (RMSEA) with 90% confidence interval, standardized root mean square residual (SRMR), standardized (STDYX) and unstandardized estimates with standard errors, standardized residual variances, communalities (R-squared), Heywood cases, scaling (marker) indicator, t-rule and model identification, nested model comparison (change in chi-square, CFI, RMSEA), configural/metric/scalar invariance, indirect effect as the product of coefficients (delta method or bootstrap confidence intervals), proportion mediated, Cohen's f-squared, convergent and discriminant validity (AVE, Fornell-Larcker), and McDonald's omega. Report values in APA 7 form, e.g. chi-square(df) = x.xx, p = .xxx; beta = .xx, SE = .xx, 95% CI [.xx, .xx]. Do not explain basic concepts and avoid filler. IMPORTANT: only use a term, estimator, test or index if the pasted output or the researcher's context supports it; never claim analyses that were not run.",std:"WRITING STYLE: Clear academic prose with standard statistical terms (fit indices, standardized loadings, regression coefficients) and brief explanations where helpful.",plain:"WRITING STYLE: Plain language. Keep key statistical terms but explain each in a short phrase so a non-specialist can follow."};
+let sample=null,ctrl=null,out="",dl=null;
+(async()=>{try{sample=await claude.use("sample")}catch(e){}
+ if(!sample){$("#warn").hidden=false;$("#go").disabled=true}
+ try{dl=await claude.use("downloads")}catch(e){}})();
+
+$("#go").onclick=async()=>{const raw=$("#raw").value.trim();if(!raw||!sample)return;
+ const ctx=[["Analysis type",$("#type").value],["Software",$("#sw").value],["Sample size",$("#n").value],["Estimator/missing data",$("#est").value],["Variables and topics",$("#var").value]].filter(x=>x[1]).map(x=>x[0]+": "+x[1]).join("\n");
+ ctrl=new AbortController();$("#go").disabled=true;$("#stop").hidden=false;$("#outcard").hidden=false;$("#dl").hidden=true;$("#res").innerHTML="<p><small>Thinking…</small></p>";$("#stat").textContent="";
+ try{const r=await sample(GUIDE+"\n\n"+STYLE[$("#lvl").value]+"\n\nCONTEXT FROM RESEARCHER:\n"+ctx+($("#ref").value.trim()?"\n\nREFERENCE ARTICLE. Use it ONLY to guide terminology, phrasing conventions, reporting order and cutoffs, and cite it in APA 7 in-text style (author, year) when you rely on it; if the author or year is not visible, use [Author, Year] as a placeholder. Paraphrase; never copy sentences or quote more than a few words. Do NOT take any numbers, results or sample details from it; all results must come from the pasted output. If the article conflicts with the guidelines above, follow the guidelines and flag the conflict under Things to double-check.\n"+$("#ref").value.trim().slice(0,60000):"")+"\n\nPASTED OUTPUT:\n"+raw,{modelTier:"complex",cache:false,signal:ctrl.signal,onText:({text})=>{out=text;$("#res").innerHTML=md(text)}});
+  out=r.text;$("#res").innerHTML=md(out);if(r.truncated)$("#stat").textContent="Output was cut off. Paste a smaller part of the output and run again.";if(dl)$("#dl").hidden=false}
+ catch(e){if(e&&e.text){out=e.text;$("#res").innerHTML=md(out)}$("#stat").textContent=e&&e.code=="rate_limited"?"Too many requests. Please wait a minute and try again.":e&&e.code=="not_granted"?"Claude access was not granted for this page.":"Stopped or failed. "+((e&&e.message)||"")}
+ $("#go").disabled=false;$("#stop").hidden=true};
+$("#stop").onclick=()=>ctrl&&ctrl.abort();
+$("#reff").onchange=async e=>{const f=e.target.files[0];if(f)$("#ref").value=await f.text()};
+$("#copy").onclick=async()=>{try{await navigator.clipboard.writeText(out);$("#copy").textContent="Copied!"}catch(e){const r=document.createRange();r.selectNodeContents($("#res"));const s=getSelection();s.removeAllRanges();s.addRange(r);$("#copy").textContent="Selected. Press Ctrl+C"}setTimeout(()=>$("#copy").textContent="Copy",2000)};
+$("#dl").onclick=async()=>{try{await dl.save({filename:"results-section.md",data:out})}catch(e){}};
+/* ---- editable path diagram ---- */
+let M=null,ed=null,mode=null,first=null,sel=null,dr=null,uid=1;const S=$("#dg"),ID=()=>"i"+(uid++);
+const fmt=v=>{if(v==null||v==="")return"?";const x=parseFloat(String(v).replace("−","-"));if(isNaN(x)||/[a-z]/i.test(String(v)))return String(v);let s=x.toFixed(2);if(Math.abs(x)<1)s=s.replace("0.",".");return s.replace("-","−")};
+const DPROMPT='Extract the path diagram from this CFA/SEM output as JSON only (no prose, no code fences). Use STANDARDIZED estimates (STDYX / std.all). Schema: {"latents":[{"name":"short name, max 10 chars","disturbance":number or null (residual variance of an endogenous factor),"indicators":[{"name":"max 8 chars","loading":number or null,"resid":number or null (standardized residual variance)}]}],"paths":[{"from":"latent name","to":"latent name","beta":number or null}],"covs":[{"a":"latent name","b":"latent name","r":number or null}]}. Include only what appears in the output. Use null for anything missing; never invent numbers. For mediation, list the direct paths only.';
+function build(d){const nodes=[],edges=[],by={};(d.latents||[]).forEach(L=>{const n={id:ID(),t:"lat",label:L.name,d:L.disturbance};nodes.push(n);by[L.name]=n;(L.indicators||[]).forEach(I=>{const o={id:ID(),t:"obs",label:I.name,e:I.resid,par:n.id};nodes.push(o);edges.push({id:ID(),k:"load",a:n.id,b:o.id,v:I.loading})})});
+ (d.paths||[]).forEach(p=>{if(by[p.from]&&by[p.to])edges.push({id:ID(),k:"path",a:by[p.from].id,b:by[p.to].id,v:p.beta})});
+ (d.covs||[]).forEach(p=>{if(by[p.a]&&by[p.b])edges.push({id:ID(),k:"cov",a:by[p.a].id,b:by[p.b].id,v:p.r})});
+ const m={nodes,edges};layout(m);return m}
+function layout(m){const lats=m.nodes.filter(n=>n.t=="lat"),dep={};lats.forEach(l=>dep[l.id]=0);
+ for(let i=0;i<lats.length;i++)m.edges.forEach(e=>{if(e.k=="path"&&dep[e.a]!=null&&dep[e.b]!=null&&dep[e.a]<lats.length&&dep[e.b]<dep[e.a]+1)dep[e.b]=dep[e.a]+1});
+ lats.sort((a,b)=>dep[a.id]-dep[b.id]);let cx=20;lats.forEach(l=>{const ch=m.nodes.filter(n=>n.par==l.id),w=Math.max(150,ch.length*88);l.x=cx+w/2;l.y=170;ch.forEach((c,i)=>{c.x=cx+(i+.5)*w/ch.length;c.y=350});cx+=w+50})}
+const ep=(n,tx,ty)=>{const dx=tx-n.x,dy=ty-n.y;if(!dx&&!dy)return[n.x,n.y];const t=n.t=="lat"?1/Math.hypot(dx/55,dy/32):Math.min(dx?36/Math.abs(dx):1e9,dy?18/Math.abs(dy):1e9);return[n.x+dx*t,n.y+dy*t]};
+const ln=(p,q)=>'<line x1="'+p[0]+'" y1="'+p[1]+'" x2="'+q[0]+'" y2="'+q[1]+'" stroke="#111" stroke-width="1.5" marker-end="url(#ar)"/>';
+const tx=(x,y,v,r)=>'<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Times New Roman,serif" font-size="14" fill="#111" stroke="#fff" stroke-width="4" paint-order="stroke" class="ed" data-r="'+r+'">'+esc(String(v))+'</text>';
+function drawD(){if(!M)return;const N={};M.nodes.forEach(n=>N[n.id]=n);const W=Math.max(900,...M.nodes.map(n=>n.x+90)),H=Math.max(...M.nodes.map(n=>n.y))+85;
+ S.setAttribute("viewBox","0 0 "+W+" "+(H+40));S.setAttribute("width",W);S.setAttribute("height",H+40);
+ let h='<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto-start-reverse"><path d="M0,0L9,4.5L0,9z" fill="#111"/></marker></defs><rect width="100%" height="100%" fill="#fff"/>';const lats=M.nodes.filter(n=>n.t=="lat");
+ M.edges.forEach(e=>{const a=N[e.a],b=N[e.b];if(!a||!b)return;const r="e."+e.id+".v",lab=fmt(e.v);
+  if(e.k=="load"){const p=ep(a,b.x,b.y),q=ep(b,a.x,a.y);h+=ln(p,q)+tx(p[0]+(q[0]-p[0])*.6,p[1]+(q[1]-p[1])*.6-3,lab,r)}
+  else{const bt=lats.some(m=>m!==a&&m!==b&&m.x>Math.min(a.x,b.x)&&m.x<Math.max(a.x,b.x));
+   if(e.k=="path"&&!bt){const p=ep(a,b.x,b.y),q=ep(b,a.x,a.y);h+=ln(p,q)+tx((p[0]+q[0])/2,(p[1]+q[1])/2-8,lab,r)}
+   else{const x1=a.x,y1=a.y-32,x2=b.x,y2=b.y-32,cy=Math.min(y1,y2)-(e.k=="cov"?90:55)-Math.abs(x2-x1)*.1,cx=(x1+x2)/2;
+    h+='<path d="M'+x1+','+y1+' Q'+cx+','+cy+' '+x2+','+y2+'" fill="none" stroke="#111" stroke-width="1.5" '+(e.k=="cov"?'marker-start="url(#ar)" ':'')+'marker-end="url(#ar)"/>'+tx(cx,(y1+y2)/4+cy/2-4,lab,r)}}});
+ M.nodes.forEach(n=>{const c=sel==n.id?"#2f4fb3":"#111",w=sel==n.id?3:1.8,a='data-n="'+n.id+'" fill="#fff" stroke="'+c+'" stroke-width="'+w+'" style="cursor:move;touch-action:none"';
+  h+=n.t=="lat"?'<ellipse '+a+' cx="'+n.x+'" cy="'+n.y+'" rx="55" ry="32"/>':'<rect '+a+' x="'+(n.x-36)+'" y="'+(n.y-18)+'" width="72" height="36"/>';
+  h+='<text x="'+n.x+'" y="'+(n.y+5)+'" text-anchor="middle" font-family="Times New Roman,serif" font-size="'+(n.t=="lat"?14:12)+'" fill="#111" pointer-events="none">'+esc(String(n.label))+'</text>';
+  if(n.t=="obs")h+=ln([n.x,n.y+52],[n.x,n.y+18])+tx(n.x,n.y+68,"e = "+fmt(n.e),"n."+n.id+".e");
+  else if(n.d!=null)h+=ln([n.x+78,n.y-58],[n.x+40,n.y-24])+tx(n.x+92,n.y-62,"d = "+fmt(n.d),"n."+n.id+".d")});
+ h+='<g font-family="Times New Roman,serif" font-size="11" fill="#111"><text x="10" y="'+(H+12)+'"><tspan font-style="italic">Note.</tspan> Ovals are latent factors; rectangles are observed indicators. One-headed arrows from factors to indicators are standardized factor loadings;</text><text x="10" y="'+(H+27)+'">one-headed arrows between factors are standardized regression coefficients; two-headed curved arrows are factor correlations. e = residual variance; d = disturbance.</text></g>';
+ S.innerHTML=h}
+function openEd(ref){const[k,id,f]=ref.split("."),o=(k=="n"?M.nodes:M.edges).find(x=>x.id==id);if(!o)return;ed={o,f,k};$("#edbox").hidden=false;$("#edl").textContent=f=="label"?"Name:":f=="e"?"Residual variance:":f=="d"?"Disturbance:":"Value:";$("#ed").value=o[f]==null?"":o[f];$("#ed").focus()}
+const pt=e=>{const p=S.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(S.getScreenCTM().inverse())};
+S.addEventListener("pointerdown",e=>{const t=e.target.closest("[data-r],[data-n]");if(!t)return;if(t.dataset.r){openEd(t.dataset.r);return}
+ const n=M.nodes.find(x=>x.id==t.dataset.n),p=pt(e);dr={n,px:p.x,py:p.y,mv:false};try{S.setPointerCapture(e.pointerId)}catch(x){}});
+S.addEventListener("pointermove",e=>{if(!dr)return;const p=pt(e),dx=p.x-dr.px,dy=p.y-dr.py;if(!dr.mv&&Math.hypot(dx,dy)<4)return;dr.mv=true;[dr.n,...(dr.n.t=="lat"?M.nodes.filter(c=>c.par==dr.n.id):[])].forEach(c=>{c.x+=dx;c.y+=dy});dr.px=p.x;dr.py=p.y;drawD()});
+S.addEventListener("pointerup",()=>{if(!dr)return;const d=dr;dr=null;if(d.mv)return;const id=d.n.id;
+ if(mode){if(!first||first==id){first=id;$("#dstat").textContent="Now click the target factor.";return}if(d.n.t=="lat"&&M.nodes.find(x=>x.id==first).t=="lat")M.edges.push({id:ID(),k:mode,a:first,b:id,v:null});mode=null;first=null;$("#dstat").textContent="";drawD();return}
+ sel=id;drawD();openEd("n."+id+".label")});
+$("#ap").onclick=()=>{if(!ed)return;ed.o[ed.f]=$("#ed").value.trim();drawD()};$("#ed").onkeydown=e=>{if(e.key=="Enter")$("#ap").click()};
+$("#del").onclick=()=>{if(!ed)return;if(ed.k=="n"){const ids=[ed.o.id,...M.nodes.filter(c=>c.par==ed.o.id).map(c=>c.id)];M.nodes=M.nodes.filter(n=>!ids.includes(n.id));M.edges=M.edges.filter(e=>!ids.includes(e.a)&&!ids.includes(e.b))}else M.edges=M.edges.filter(e=>e!==ed.o);ed=null;sel=null;$("#edbox").hidden=true;drawD()};
+$("#al").onclick=()=>{M.nodes.push({id:ID(),t:"lat",label:"Factor",d:null,x:Math.max(...M.nodes.map(n=>n.x))+150,y:170});drawD()};
+$("#ai").onclick=()=>{const l=M.nodes.find(n=>n.id==sel&&n.t=="lat");if(!l){$("#dstat").textContent="Click a factor first, then add an indicator.";return}const k=M.nodes.filter(n=>n.par==l.id).length,o={id:ID(),t:"obs",label:"Item"+(k+1),e:null,par:l.id,x:l.x+(k-1)*80,y:350};M.nodes.push(o);M.edges.push({id:ID(),k:"load",a:l.id,b:o.id,v:null});drawD()};
+$("#cp").onclick=()=>{mode="path";first=null;$("#dstat").textContent="Click the source factor, then the target factor."};$("#cc").onclick=()=>{mode="cov";first=null;$("#dstat").textContent="Click two factors to connect them with a correlation."};
+$("#rl").onclick=()=>{layout(M);drawD()};
+$("#dsv").onclick=async()=>{if(!dl){$("#dstat").textContent="Download isn’t available in this view.";return}const k=sel;sel=null;drawD();const s=new XMLSerializer().serializeToString(S);sel=k;drawD();try{await dl.save({filename:"path-diagram.svg",data:s})}catch(e){}};
+$("#dd").onclick=async()=>{const raw=$("#raw").value.trim();if(!sample||!raw){$("#dstat").textContent="Paste your output above first.";return}$("#dd").disabled=true;$("#dstat").textContent="Reading the model…";
+ try{const d=await sample.json(DPROMPT+"\n\nOUTPUT:\n"+raw,{modelTier:"complex",cache:false});M=build(d);sel=null;ed=null;$("#edbox").hidden=true;$("#dwrap").hidden=false;drawD();$("#dstat").textContent="Drag shapes to move them. Click a shape, number, or label to edit it."}
+ catch(e){$("#dstat").textContent="Couldn’t read a model from this output. "+((e&&e.message)||"")}$("#dd").disabled=false};
+</script></main></body></html>
