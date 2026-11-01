@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SEM Results Writer</title>
+<title>SEM Results Writer (offline, no AI)</title>
 <style>
 :root{--bg:#f6f7fb;--card:#fff;--ink:#1d2433;--mut:#5d6679;--line:#d9deea;--pri:#2f4fb3;--warn:#fff3cd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171f;--card:#1e222d;--ink:#e8ebf4;--mut:#9aa3b8;--line:#343b4d;--pri:#7d9bff;--warn:#4a3f17;color-scheme:dark}}
@@ -24,33 +24,33 @@ button.p{background:var(--pri);color:#fff;border-color:var(--pri)}button:disable
 th,td{padding:5px 12px;text-align:left}th{border-top:2px solid var(--ink);border-bottom:1px solid var(--ink)}tr:last-child td{border-bottom:2px solid var(--ink)}
 small{color:var(--mut)}
 .svgw{overflow-x:auto;background:#fff;border:1px solid var(--line);border-radius:8px;margin-top:10px}#dg{display:block;max-width:none}.ed{cursor:pointer}.ed:hover{fill:#2f4fb3}
-</style></head><body><main>
+</style></head>
+<body><main>
 <h1>SEM Results Writer</h1>
-<p class="sub">Paste your CFA/SEM software output and get a Results section drafted to the Ahn reporting guidelines (Oct 2026).</p>
-<div id="warn" hidden>This tool needs Claude access, which isn’t available in this view. Open it from your claude.ai artifact link while signed in.</div>
+<p class="sub">Paste Mplus output and get a Results section drafted to the Ahn reporting guidelines (Oct 2026). Everything is computed by rules in this page: no AI, no internet, no account.</p>
 <div class="card">
 <div class="g">
 <div><label for="type">Analysis type</label><select id="type"><option>CFA only</option><option selected>SEM (measurement + structural)</option><option>SEM with mediation</option><option>Multiple-group SEM</option><option>CFA with measurement invariance</option></select></div>
-<div><label for="sw">Software</label><select id="sw"><option>Mplus</option><option>lavaan (R)</option><option>Stata</option><option>AMOS</option><option>Other</option></select></div>
-<div><label for="n">Sample size (optional)</label><input id="n" placeholder="e.g., 1,250 teachers"></div>
-<div><label for="est">Estimator / missing data (optional)</label><input id="est" placeholder="e.g., MLR with FIML"></div>
 <div><label for="lvl">Technical level</label><select id="lvl"><option value="tech" selected>Highly technical (journal-ready)</option><option value="std">Standard</option><option value="plain">Plain-language</option></select></div>
+<div><label for="n">Sample description (optional)</label><input id="n" placeholder="e.g., 1,250 teachers"></div>
+<div><label for="est">Estimator / missing data (optional)</label><input id="est" placeholder="e.g., MLR with FIML"></div>
 </div>
-<label for="var">Predictor(s), outcome(s), mediator(s) and factor topics (optional)</label>
-<input id="var" placeholder="e.g., Predictor: leadership; Mediator: self-efficacy; Outcome: job satisfaction">
-<label for="ref">Reference article or example (optional)</label><textarea id="ref" style="min-height:110px" placeholder="Paste the text of an article you want the draft to follow for terminology, reporting order and citations (for example, a methods article or a published Results section). Or load a .txt/.md file below."></textarea><input type="file" id="reff" accept=".txt,.md" style="margin-top:6px">
-<label for="raw">Paste your output here</label>
-<textarea id="raw" placeholder="Paste model fit, standardized loadings (STDYX), factor correlations, regression paths, indirect effects, R-square, etc."></textarea>
-<div class="row"><button class="p" id="go">Generate results section</button><button id="stop" hidden>Stop</button><small id="stat"></small></div>
-<small>Tip: include the whole output. The more of it you paste, the fewer “[not provided]” flags you’ll get. Anything missing is flagged instead of invented.</small>
+<label for="lab">Labels (optional): one per line as NAME = label</label>
+<textarea id="lab" style="min-height:110px" placeholder="FDISC = Student discipline&#10;FSTBEH = Student behavior&#10;TT3G01 = Item wording for TT3G01"></textarea>
+<label for="raw">Paste your Mplus output here</label>
+<textarea id="raw" placeholder="Paste the full .out text: MODEL FIT INFORMATION, STANDARDIZED MODEL RESULTS (STDYX), R-SQUARE, and, for mediation, the STANDARDIZED TOTAL, TOTAL INDIRECT, SPECIFIC INDIRECT, AND DIRECT EFFECTS section. You can paste several runs one after another (for example, CFA then SEM, or configural, metric, scalar)."></textarea>
+<div class="row"><button class="p" id="go">Generate results section</button><small id="stat"></small></div>
+<small>Tip: request OUTPUT: STDYX; and, for mediation, MODEL INDIRECT. Anything missing from the output is flagged as “[not provided: …]” instead of being invented. Software supported: Mplus.</small>
 </div>
-<div class="card" id="outcard" hidden><div class="row" style="margin:0 0 8px"><button id="copy">Copy</button><button id="dl" hidden>Download .md</button></div><div id="res"></div></div>
-<div class="card"><h3 style="margin:0 0 4px">Path diagram (editable)</h3><small>Builds a standardized path diagram from the output you pasted above.</small>
+<div class="card" id="outcard" hidden><div class="row" style="margin:0 0 8px"><button id="copy">Copy</button><button id="dl">Download .md</button></div><div id="res"></div></div>
+<div class="card"><h3 style="margin:0 0 4px">Path diagram (editable)</h3><small>Builds a standardized path diagram from the Mplus output pasted above (latent factors only; observed covariates are not drawn).</small>
 <div class="row"><button class="p" id="dd">Draw diagram from output</button><small id="dstat"></small></div>
 <div id="dwrap" hidden><div class="row"><button id="al">+ Factor</button><button id="ai">+ Indicator</button><button id="cp">Connect: path</button><button id="cc">Connect: correlation</button><button id="rl">Re-layout</button><button id="dsv">Download SVG</button></div>
 <div id="edbox" class="row" hidden><small id="edl"></small><input id="ed" style="max-width:220px"><button id="ap">Apply</button><button id="del">Delete</button></div>
 <div class="svgw"><svg id="dg" xmlns="http://www.w3.org/2000/svg"></svg></div></div></div>
 <script>
+
+/*CORE*/
 const $=s=>document.querySelector(s);
 const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 function md(t){const L=t.split("\n");let h="",i=0;const inl=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>");
@@ -59,50 +59,304 @@ function md(t){const L=t.split("\n");let h="",i=0;const inl=s=>esc(s).replace(/\
    const cells=r=>r.trim().replace(/^\||\|$/g,"").split("|").map(c=>c.trim());
    const body=rows.filter(r=>!/^\s*\|[\s:|-]+\|\s*$/.test(r));
    h+="<div class=sc><table>"+body.map((r,k)=>"<tr>"+cells(r).map(c=>"<"+(k?"td":"th")+">"+inl(c)+"</"+(k?"td":"th")+">").join("")+"</tr>").join("")+"</table></div>";continue}
+  if(/^\s*-\s+/.test(l)){h+="<ul>";while(i<L.length&&/^\s*-\s+/.test(L[i])){h+="<li>"+inl(L[i].replace(/^\s*-\s+/,""))+"</li>";i++}h+="</ul>";continue}
   const m=l.match(/^(#{1,4})\s+(.*)/);
   if(m)h+="<h"+(m[1].length+1)+">"+inl(m[2])+"</h"+(m[1].length+1)+">";else if(l.trim())h+="<p>"+inl(l)+"</p>";
   i++}return h}
 
-const GUIDE=`You are an expert quantitative methodologist helping a researcher write the RESULTS section of a CFA/SEM paper. Follow these reporting guidelines (Ahn, University of Arizona; drawing on Kline, 2016 and Hu & Bentler, 1999). Write in APA 7 style, PAST TENSE, in the researcher's voice ("the model was...", "we found..."). Paraphrase; do not quote sources.
+/* ---------- number formatting (APA 7) ---------- */
+const MI="\u2212";
+const f2=x=>x==null?null:x.toFixed(2).replace("-",MI);
+const f3=x=>{if(x==null)return null;const a=Math.abs(x).toFixed(3),s=x<0&&+a!==0?MI:"";return s+(Math.abs(x)<1?a.replace(/^0/,""):a)};
+const pTxt=p=>p==null?null:(p<.0005?"< .001":"= "+f3(p));
+const NP=(R,w)=>{if(!R.missing.includes(w))R.missing.push(w);return "[not provided: "+w+"]"};
+const tbl=(h,rows)=>"| "+h.join(" | ")+" |\n|"+h.map(()=>"---").join("|")+"|\n"+rows.map(r=>"| "+r.join(" | ")+" |").join("\n");
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
 
-NEVER invent numbers. Use only values in the pasted output. If something the guidelines require is missing from the output, write a bracketed placeholder like [not provided: CFI] and list it under "Items to add" at the end.
+/* ---------- chi-square tail probability ---------- */
+function lgam(z){const c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];let y=z,x=z,t=x+5.5;t-=(x+.5)*Math.log(t);let s=1.000000000190015;for(let j=0;j<6;j++)s+=c[j]/++y;return -t+Math.log(2.5066282746310005*s/x)}
+function gammaQ(a,x){if(x<=0)return 1;const g=lgam(a);
+ if(x<a+1){let ap=a,sum=1/a,del=sum;for(let n=0;n<1000;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-14)break}return 1-sum*Math.exp(-x+a*Math.log(x)-g)}
+ let b=x+1-a,c=1e300,d=1/b,h=d;for(let i=1;i<1000;i++){const an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;const del=d*c;h*=del;if(Math.abs(del-1)<1e-14)break}
+ return Math.exp(-x+a*Math.log(x)-g)*h}
+const chiP=(x,df)=>df>0&&x>=0?gammaQ(df/2,x/2):null;
 
-STRUCTURE (include only parts that apply to the analysis type):
-1. Model identification: state whether the model was identified and why (df >= 0, convergence, no warnings). Check for unreasonable estimates even without warnings (negative residual variances/Heywood cases, standardized loadings > 1, correlations > 1) and flag any you see.
-2. Model fit: report chi-square with df and p, plus RMSEA (with 90% CI if given), CFI, TLI, SRMR. Judge fit against Hu & Bentler (1999) cutoffs: CFI/TLI >= .95, RMSEA <= .06, SRMR <= .08 (say "adequate" or "not adequate" for each and overall). Do not rely on chi-square alone.
-3. Factor naming: name each latent factor and justify the name from the indicator content (use item wording if provided; otherwise use placeholders for the researcher to fill in).
-4. Factor loadings: an APA 7 style table (markdown) of STANDARDIZED loadings by factor, plus factor covariances/correlations. Discuss item reliability (standardized loadings; treat >= .50-.70 as adequate and name the cutoff you apply; flag weak items; mention squared loadings if useful).
-5. Factor discriminant validity: report the factor correlations that support the conclusion (e.g., correlations well below .85; if possible compare against square-root AVE if derivable) and state the cutoff.
-6. Factor internal reliability: McDonald's omega per factor (NOT Cronbach's alpha). If omega is not in the output but standardized loadings are, compute it as (sum of loadings)^2 / ((sum of loadings)^2 + sum of residual variances) and say it was computed from standardized loadings; show values in a table.
-7. (SEM) Structural model: fit of the full model, standardized regression coefficients (with SE/CI/p if given), R-square, and a plain-language interpretation of each path, e.g. "A one standard deviation increase in [predictor] was associated with a [beta] standard deviation increase/decrease in [outcome]." Describe what a path diagram should contain (standardized loadings, standardized paths, disturbances) and note that the researcher must draw it.
-8. (Mediation) Focus on the MAGNITUDE of indirect effects, not just significance. Report direct, indirect, total effects and compute proportion mediated = indirect / total (and say how much mediation replaces the direct effect).
-9. Emphasize effect sizes over statistical significance throughout.
-10. (Multiple-group / invariance) Describe the sequence tested (configural first, then added equality constraints), compare nested models with change in CFI/RMSEA/chi-square if provided, and note that equality constraints apply to unstandardized estimates so STDYX values differ across groups, that standardized coefficients generally should not be compared across groups, and that Cohen's f2 is an alternative effect-size measure.
+/* ---------- Mplus parsing ---------- */
+const isNum=s=>/^-?(\d+\.?\d*|\.\d+)\*{0,2}$/.test(s);
+const nv=s=>{if(/^\*+$/.test(s))return null;const x=parseFloat(s);return Math.abs(x)>=999?null:x};
+function rowOf(line){const t=line.trim().split(/\s+/);if(t.length<2||isNum(t[0]))return null;const r=t.slice(1);if(!r.every(x=>isNum(x)||/^\*+$/.test(x)))return null;const v=r.map(nv);return{name:t[0],est:v[0],se:v[1]==null?null:v[1],z:v[2]==null?null:v[2],p:v[3]==null?null:v[3]}}
+const grp=s=>{const p=s.split(/^\s*Group\s+\S+\s*$/m);return p.length>1?{s:p[1],n:p.length-1}:{s,n:1}};
+function splitRuns(t){let idx=[...t.matchAll(/^\s*Mplus VERSION/gim)].map(m=>m.index);
+ if(idx.length<2)idx=[...t.matchAll(/^\s*INPUT INSTRUCTIONS/gim)].map(m=>m.index);
+ if(idx.length<2)return[t];idx.push(t.length);const r=[];for(let i=0;i<idx.length-1;i++)r.push(t.slice(idx[i],idx[i+1]));return r.filter(x=>x.trim())}
+function parseFit(t){const F={};
+ const m=t.match(/Chi-Square Test of Model Fit(?!\s+for)[^\n]*\n([\s\S]{0,700})/i);
+ if(m){const blk=m[1].split(/RMSEA/i)[0];const g=(re)=>{const k=blk.match(re);return k?parseFloat(k[1]):null};
+  F.chi=g(/Value\s+(-?[\d.]+)/);F.df=g(/Degrees of Freedom\s+([\d.]+)/);F.p=g(/P-Value\s+([\d.]+)/);F.scf=g(/Scaling Correction Factor\s+([\d.]+)/)}
+ const r=t.match(/RMSEA[^\n]*\n\s*Estimate\s+([\d.]+)\s+90 Percent C\.I\.\s+([\d.]+)\s+([\d.]+)(?:\s+Probability RMSEA <= \.05\s+([\d.]+))?/i);
+ if(r){F.rmsea=+r[1];F.lo=+r[2];F.hi=+r[3];F.prob=r[4]!=null?+r[4]:null}
+ const c=t.match(/^\s*CFI\s+([\d.]+)/im);if(c)F.cfi=+c[1];
+ const l=t.match(/^\s*TLI\s+([\d.]+)/im);if(l)F.tli=+l[1];
+ const s=t.match(/SRMR[^\n]*\n\s*Value\s+([\d.]+)/i);if(s)F.srmr=+s[1];
+ const w=t.match(/WRMR[^\n]*\n\s*Value\s+([\d.]+)/i);if(w)F.wrmr=+w[1];
+ return F}
+function parseStd(t){const a=t.search(/^\s*STDYX Standardization/m);if(a<0)return null;
+ let rest=t.slice(a);const e=rest.slice(10).search(/^\s*(STDY Standardization|STD Standardization|R-SQUARE|QUALITY OF NUMERICAL RESULTS)/m);if(e>=0)rest=rest.slice(0,e+10);
+ const g=grp(rest);const SD={load:[],paths:[],withs:[],resid:{},latents:new Set(),groups:g.n};let cur=null,sec=null;
+ for(const line of g.s.split("\n")){const tr=line.trim();if(!tr)continue;
+  const h=tr.match(/^(\S+)\s+(BY|ON|WITH)$/);if(h){cur={a:h[1],op:h[2]};sec="rel";if(h[2]=="BY")SD.latents.add(h[1]);continue}
+  const low=tr.toLowerCase();if(/^(intercepts|means|thresholds|variances|scales|residual variances|new\/additional parameters|dispersion)$/.test(low)){sec=low=="residual variances"?"res":"oth";cur=null;continue}
+  const r=rowOf(line);if(!r)continue;
+  if(sec=="rel"&&cur){if(cur.op=="BY")SD.load.push({f:cur.a,i:r.name,est:r.est,se:r.se,p:r.p});else if(cur.op=="ON")SD.paths.push({to:cur.a,from:r.name,est:r.est,se:r.se,p:r.p});else SD.withs.push({a:cur.a,b:r.name,est:r.est,se:r.se,p:r.p})}
+  else if(sec=="res")SD.resid[r.name]=r.est}
+ return SD}
+function parseR2(t){const a=t.search(/^\s*R-SQUARE\s*$/m);if(a<0)return{obs:{},lat:{}};let s=t.slice(a);
+ const e=s.slice(10).search(/^\s*(QUALITY OF NUMERICAL|TECHNICAL|TOTAL, TOTAL INDIRECT|STANDARDIZED TOTAL)/m);if(e>=0)s=s.slice(0,e+10);
+ const g=grp(s),o={obs:{},lat:{}};let mode=null;
+ for(const line of g.s.split("\n")){if(/^\s*Observed\b/.test(line)){mode="obs";continue}if(/^\s*Latent\b/.test(line)){mode="lat";continue}const r=rowOf(line);if(r&&mode)o[mode][r.name]=r.est}
+ return o}
+function parseEffects(t){const h=t.search(/STANDARDIZED TOTAL, TOTAL INDIRECT, SPECIFIC INDIRECT/i);if(h<0)return null;
+ let sub=t.slice(h);const s=sub.search(/STDYX Standardization/i);if(s<0)return null;sub=sub.slice(s+10);
+ const e=sub.search(/^\s*(STDY Standardization|STD Standardization|QUALITY OF NUMERICAL|TECHNICAL)/m);if(e>=0)sub=sub.slice(0,e);
+ const N4=/(-?\d*\.\d+)\s+(-?\d*\.\d+)\s+(-?\d*\.\d+|\*+)\s+(-?\d*\.\d+)/;const out=[];let cur=null,mode=null,names=[];
+ const pack=m=>({est:+m[1],se:+m[2],p:+m[4]});
+ for(const line of sub.split("\n")){const m=line.match(/Effects from (\S+) to (\S+)/i);
+  if(m){cur={from:m[1],to:m[2],spec:[],total:null,tind:null,direct:null};out.push(cur);mode=null;names=[];continue}
+  if(!cur)continue;let k;
+  if((k=line.match(/^\s*Total indirect\s+(.*)$/i))&&N4.test(k[1])){cur.tind=pack(k[1].match(N4));continue}
+  if((k=line.match(/^\s*Total\s+(.*)$/i))&&N4.test(k[1])){cur.total=pack(k[1].match(N4));continue}
+  if(/^\s*Specific indirect\s*\d*\s*$/i.test(line)){mode="spec";names=[];continue}
+  if(/^\s*Direct\s*$/i.test(line)){mode="dir";names=[];continue}
+  if(!mode)continue;
+  const r=line.trim().split(/\s+/);
+  if(r.length==1&&r[0]){names.push(r[0]);continue}
+  const q=line.match(/^\s*(\S+)\s+(.*)$/);
+  if(q&&N4.test(q[2])){const v=pack(q[2].match(N4));
+   if(mode=="spec"){cur.spec.push({path:[...names,q[1]].reverse(),...v})}else{cur.direct=v}
+   mode=null;names=[]}}
+ return out.filter(x=>x.total||x.tind||x.direct||x.spec.length)}
+function parseRun(t){const R={missing:[],warn:[],checks:[]};
+ R.terminated=/TERMINATED NORMALLY/i.test(t)?true:(/DID NOT TERMINATE NORMALLY/i.test(t)?false:null);
+ let m=t.match(/Number of observations\s+(\d+)/i);R.n=m?+m[1]:null;
+ m=t.match(/^\s*Estimator\s+(\w+)/im);R.estimator=m?m[1].toUpperCase():null;
+ m=t.match(/Number of Free Parameters\s+(\d+)/i);R.nfree=m?+m[1]:null;
+ R.cluster=/TYPE\s*=\s*[^;]*(COMPLEX|TWOLEVEL)/i.test(t);R.boot=/BOOTSTRAP/i.test(t.replace(/Number of bootstrap[^\n]*/ig,""))&&/BOOTSTRAP\s*=|BCBOOTSTRAP|CINTERVAL/i.test(t);
+ const W=[[/NON-POSITIVE DEFINITE|NOT POSITIVE DEFINITE/,"a covariance matrix was not positive definite"],[/SADDLE POINT/,"the model estimation reached a saddle point"],[/MAY NOT BE TRUSTWORTHY/,"standard errors may not be trustworthy"],[/NEGATIVE (RESIDUAL )?VARIANCE|VARIANCE .* NEGATIVE/,"a negative variance was reported"],[/NO CONVERGENCE|DID NOT CONVERGE/,"the model did not converge"],[/DID NOT TERMINATE NORMALLY/,"estimation did not terminate normally"]];
+ const U=t.toUpperCase();W.forEach(([re,msg])=>{if(re.test(U))R.warn.push(msg)});
+ R.fit=parseFit(t);R.std=parseStd(t);R.r2=parseR2(t);R.eff=parseEffects(t);
+ return R}
 
-END with two short lists: "Items to add" (missing information) and "Things to double-check" (anomalies, warnings, small samples, nesting not addressed, etc.).
-Use markdown headings and markdown tables. Be concise and accurate.`;
+/* ---------- derived statistics ---------- */
+function factorStats(R){const SD=R.std,res=[];if(!SD)return res;
+ SD.latents.forEach(f=>{const it=SD.load.filter(l=>l.f==f&&l.est!=null).map(l=>({...l,theta:SD.resid[l.i]!=null?SD.resid[l.i]:1-l.est*l.est}));
+  const k=it.length,sl=it.reduce((a,x)=>a+x.est,0),sq=it.reduce((a,x)=>a+x.est*x.est,0),st=it.reduce((a,x)=>a+x.theta,0);
+  res.push({f,it,k,omega:k>1?sl*sl/(sl*sl+st):null,ave:k?sq/(sq+st):null})});return res}
+function anoms(R){const SD=R.std,a=[];if(!SD)return a;
+ SD.load.forEach(l=>{if(l.est!=null&&Math.abs(l.est)>1)a.push("standardized loading above 1.00 ("+l.i+" on "+l.f+" = "+f2(l.est)+")")});
+ Object.keys(SD.resid).forEach(k=>{if(SD.resid[k]<0)a.push("negative standardized residual variance ("+k+" = "+f3(SD.resid[k])+")")});
+ SD.withs.forEach(w=>{if(w.est!=null&&Math.abs(w.est)>1)a.push("correlation exceeding 1.00 ("+w.a+" with "+w.b+" = "+f3(w.est)+")")});return a}
+const MET={chi:0};
+function judge(F){const j={};
+ if(F.cfi!=null)j.cfi=F.cfi>=.95;if(F.tli!=null)j.tli=F.tli>=.95;if(F.rmsea!=null)j.rmsea=F.rmsea<=.06;if(F.srmr!=null)j.srmr=F.srmr<=.08;return j}
+const mag=b=>{const a=Math.abs(b);return a<.1?"trivial":a<.3?"small":a<.5?"moderate":"large"};
+const ESTN={MLR:"robust maximum likelihood (MLR)",ML:"maximum likelihood (ML)",MLM:"maximum likelihood with robust standard errors and a mean-adjusted chi-square (MLM)",MLMV:"maximum likelihood with a mean- and variance-adjusted chi-square (MLMV)",MLF:"maximum likelihood with first-order derivative standard errors (MLF)",WLSMV:"weighted least squares with a mean- and variance-adjusted test statistic (WLSMV)",WLSM:"weighted least squares with a mean-adjusted test statistic (WLSM)",ULSMV:"unweighted least squares with a mean- and variance-adjusted test statistic (ULSMV)"};
+const REFS={hu:"Hu, L., & Bentler, P. M. (1999). Cutoff criteria for fit indexes in covariance structure analysis: Conventional criteria versus new alternatives. *Structural Equation Modeling, 6*(1), 1\u201355.",kline:"Kline, R. B. (2016). *Principles and practice of structural equation modeling* (4th ed.). Guilford Press.",fl:"Fornell, C., & Larcker, D. F. (1981). Evaluating structural equation models with unobservable variables and measurement error. *Journal of Marketing Research, 18*(1), 39\u201350.",mcd:"McDonald, R. P. (1999). *Test theory: A unified treatment*. Lawrence Erlbaum Associates.",cohen:"Cohen, J. (1988). *Statistical power analysis for the behavioral sciences* (2nd ed.). Lawrence Erlbaum Associates.",cheung:"Cheung, G. W., & Rensvold, R. B. (2002). Evaluating goodness-of-fit indexes for testing measurement invariance. *Structural Equation Modeling, 9*(2), 233\u2013255.",chen:"Chen, F. F. (2007). Sensitivity of goodness of fit indexes to lack of measurement invariance. *Structural Equation Modeling, 14*(3), 464\u2013504.",sb:"Satorra, A., & Bentler, P. M. (2001). A scaled difference chi-square test statistic for moment structure analysis. *Psychometrika, 66*(4), 507\u2013514."};
 
-const STYLE={tech:"WRITING STYLE: Highly technical, journal-ready quantitative prose for methodologically literate reviewers. Use precise statistical terminology wherever the pasted output supports it, for example: robust maximum likelihood (MLR) or WLSMV, Satorra-Bentler scaled chi-square (scaling correction factor), degrees of freedom, comparative fit index (CFI), Tucker-Lewis index (TLI), root mean square error of approximation (RMSEA) with 90% confidence interval, standardized root mean square residual (SRMR), standardized (STDYX) and unstandardized estimates with standard errors, standardized residual variances, communalities (R-squared), Heywood cases, scaling (marker) indicator, t-rule and model identification, nested model comparison (change in chi-square, CFI, RMSEA), configural/metric/scalar invariance, indirect effect as the product of coefficients (delta method or bootstrap confidence intervals), proportion mediated, Cohen's f-squared, convergent and discriminant validity (AVE, Fornell-Larcker), and McDonald's omega. Report values in APA 7 form, e.g. chi-square(df) = x.xx, p = .xxx; beta = .xx, SE = .xx, 95% CI [.xx, .xx]. Do not explain basic concepts and avoid filler. IMPORTANT: only use a term, estimator, test or index if the pasted output or the researcher's context supports it; never claim analyses that were not run.",std:"WRITING STYLE: Clear academic prose with standard statistical terms (fit indices, standardized loadings, regression coefficients) and brief explanations where helpful.",plain:"WRITING STYLE: Plain language. Keep key statistical terms but explain each in a short phrase so a non-specialist can follow."};
-let sample=null,ctrl=null,out="",dl=null;
-(async()=>{try{sample=await claude.use("sample")}catch(e){}
- if(!sample){$("#warn").hidden=false;$("#go").disabled=true}
- try{dl=await claude.use("downloads")}catch(e){}})();
+/* ---------- report generation ---------- */
+function genRun(R,C,H){const F=R.fit,SD=R.std,L=C.labels,o=[],lvl=C.lvl,plain=lvl=="plain",tech=lvl=="tech";
+ const fl=n=>L[n.toUpperCase()]?L[n.toUpperCase()]+" ("+n+")":n,il=n=>L[n.toUpperCase()]||"";const ref=k=>C.refs.add(k);
+ const stats=factorStats(R),hasLat=SD&&SD.latents.size>0;
+ const structural=SD&&SD.paths.length>0&&!/^CFA/.test(C.type);
+ /* 1 identification */
+ o.push(H+" Model identification and estimation");let p=[];
+ if(F.df==null)p.push("Model identification could not be evaluated "+NP(R,"degrees of freedom")+".");
+ else if(F.df>0)p.push("The model was over-identified (df = "+F.df+(R.nfree?", with "+R.nfree+" freely estimated parameters":"")+"), satisfying the necessary condition for identification (df \u2265 0)"+(R.terminated?", and estimation converged.":"."));
+ else if(F.df==0)p.push("The model was just-identified (df = 0), so it reproduced the data exactly by construction and global fit indices are uninformative.");
+ else p.push("The model was not identified (df < 0); the results below should not be interpreted.");
+ const est=C.estText||(R.estimator&&ESTN[R.estimator]?ESTN[R.estimator]:R.estimator);
+ if(est)p.push("The model was estimated using "+est+(C.estText&&R.estimator?" (software output: "+R.estimator+")":"")+".");
+ const nT=R.n!=null?"N = "+R.n.toLocaleString("en-US"):null;
+ if(nT||C.nText)p.push("The analysis was based on "+(C.nText?C.nText+(nT?" ("+nT+")":""):nT)+".");
+ else p.push("The sample size "+NP(R,"number of observations")+".");
+ if(R.terminated===true)p.push(R.warn.length?"Estimation terminated normally, but the software issued the following warning(s): "+R.warn.join("; ")+".":"Estimation terminated normally and no warnings were issued.");
+ else if(R.terminated===false)p.push("Estimation did not terminate normally"+(R.warn.length?" ("+R.warn.join("; ")+")":"")+".");
+ else p.push("Convergence status "+NP(R,"convergence message")+".");
+ if(R.terminated===false)R.checks.push("Estimation did not terminate normally; resolve this before reporting results.");
+ else if(R.warn.length)R.checks.push("Software warnings present: "+R.warn.join("; ")+".");
+ if(SD){const an=anoms(R);p.push(an.length?"Inspection of the standardized solution revealed improper or implausible estimates: "+an.join("; ")+".":"Inspection of the standardized solution revealed no improper estimates (no negative residual variances, standardized loadings above 1.00, or correlations above 1.00).");
+  if(an.length)R.checks.push("Improper estimates found ("+an.join("; ")+"). Treat the solution with caution.")}
+ else p.push("Improper estimates (Heywood cases) could not be checked "+NP(R,"standardized results (STDYX)")+".");
+ if(plain)p.push("In plain terms, identification means the data contain enough information to estimate every parameter in the model.");
+ o.push(p.join(" "));
+ /* 2 fit */
+ o.push(H+" Model fit");ref("hu");ref("kline");
+ const J=judge(F);const ev=b=>b==null?"":b?"Adequate":"Not adequate";
+ const chiS=F.chi==null?NP(R,"chi-square"):(tech&&F.scf!=null?"scaled ":"")+"\u03c7\u00b2("+F.df+") = "+f2(F.chi)+", p "+(pTxt(F.p)||NP(R,"chi-square p-value"));
+ const ci=F.rmsea!=null?"RMSEA = "+f3(F.rmsea)+(F.lo!=null?", 90% CI ["+f3(F.lo)+", "+f3(F.hi)+"]":""):"RMSEA = "+NP(R,"RMSEA");
+ const part=[chiS,ci,"CFI = "+(F.cfi!=null?f3(F.cfi):NP(R,"CFI")),"TLI = "+(F.tli!=null?f3(F.tli):NP(R,"TLI")),"SRMR = "+(F.srmr!=null?f3(F.srmr):(F.wrmr!=null?NP(R,"SRMR")+" (WRMR = "+f3(F.wrmr)+" was reported instead)":NP(R,"SRMR")))];
+ const keys=["cfi","tli","rmsea","srmr"],got=keys.filter(k=>J[k]!==undefined),ok=got.filter(k=>J[k]);
+ let ov=got.length<4?"incompletely evaluable (some indices not provided)":ok.length==4?"adequate":ok.length>=2?"mixed":"not adequate";
+ if(got.length==4&&ok.length==4)ov="adequate";
+ let t2="Model fit was evaluated with multiple indices rather than the chi-square test alone, because chi-square is sensitive to sample size. "+"Fit statistics were "+part.join("; ")+". Against the Hu and Bentler (1999) criteria (CFI and TLI \u2265 .95, RMSEA \u2264 .06, SRMR \u2264 .08), overall fit was "+ov+".";
+ if(tech&&F.scf!=null)t2+=" The chi-square value is the "+(R.estimator&&/MLR|MLM/.test(R.estimator)?"Satorra\u2013Bentler-type scaled ":"scaled ")+"statistic (scaling correction factor = "+f3(F.scf)+").";
+ if(tech&&F.prob!=null)t2+=" The probability that RMSEA \u2264 .05 was "+f3(F.prob)+".";
+ if(plain)t2+=" CFI and TLI compare the model with a baseline model (closer to 1 is better), RMSEA reflects approximation error per degree of freedom (smaller is better), and SRMR summarizes the average standardized residual (smaller is better).";
+ o.push(t2);
+ o.push(tbl(["Index","Value","Criterion","Evaluation"],[["\u03c7\u00b2(df)",F.chi!=null?f2(F.chi)+" ("+F.df+")"+(F.p!=null?", p "+pTxt(F.p):""):"[not provided]","Reported; not used alone","\u2014"],["RMSEA"+(F.lo!=null?" [90% CI]":""),F.rmsea!=null?f3(F.rmsea)+(F.lo!=null?" ["+f3(F.lo)+", "+f3(F.hi)+"]":""):"[not provided]","\u2264 .06",ev(J.rmsea)||"\u2014"],["CFI",F.cfi!=null?f3(F.cfi):"[not provided]","\u2265 .95",ev(J.cfi)||"\u2014"],["TLI",F.tli!=null?f3(F.tli):"[not provided]","\u2265 .95",ev(J.tli)||"\u2014"],["SRMR",F.srmr!=null?f3(F.srmr):"[not provided]","\u2264 .08",ev(J.srmr)||"\u2014"]]));
+ if(got.length>0&&ok.length<got.length)R.checks.push("Not all fit indices met the Hu and Bentler (1999) criteria; consider whether modification is theoretically justified before changing the model.");
+ /* 3-6 measurement model */
+ if(hasLat){
+  o.push(H+" Factor naming");
+  const nameRows=stats.map(s=>[s.f,L[s.f.toUpperCase()]||"[name needed]",s.it.map(x=>x.i).join(", ")]);
+  o.push(tbl(["Factor","Name","Indicators"],nameRows));
+  const nm=[];stats.forEach(s=>{const lb=L[s.f.toUpperCase()];const items=s.it.map(x=>il(x.i)?x.i+" (\""+il(x.i)+"\")":x.i);
+   if(lb)nm.push("The factor "+s.f+" was named \u201c"+lb+"\u201d on the basis of the content shared by its "+s.k+" indicators ("+items.join("; ")+")"+(s.it.some(x=>il(x.i))?".":" [justify from item wording].")); 
+   else{nm.push("[Factor name for "+s.f+": justify from the content of "+items.join("; ")+"]");R.missing.push("name and item wording for "+s.f)}});
+  o.push(nm.join(" "));
+  /* loadings */
+  o.push(H+" Factor loadings and item reliability");
+  const r2=i=>R.r2.obs[i]!=null?R.r2.obs[i]:(SD.resid[i]!=null?1-SD.resid[i]:null);
+  const rows=[];stats.forEach(s=>s.it.forEach(x=>rows.push([s.f,x.i+(il(x.i)?" \u2013 "+il(x.i):""),f3(x.est),x.se!=null?f3(x.se):"\u2014",x.p!=null?(x.p<.0005?"< .001":f3(x.p)):"\u2014",r2(x.i)!=null?f3(r2(x.i)):"\u2014"])));
+  o.push("*Table 1.* Standardized (STDYX) factor loadings");
+  o.push(tbl(["Factor","Indicator","\u03bb","SE","p","R\u00b2"],rows));
+  const all=stats.flatMap(s=>s.it);
+  if(all.length){const ab=all.map(x=>Math.abs(x.est)),lo=Math.min(...ab),hi=Math.max(...ab);
+   const strong=all.filter(x=>Math.abs(x.est)>=.7),mid=all.filter(x=>Math.abs(x.est)>=.5&&Math.abs(x.est)<.7),weak=all.filter(x=>Math.abs(x.est)<.5);
+   let t3="Standardized loadings ranged from "+f3(lo)+" to "+f3(hi)+" (M = "+f3(mean(ab))+"). Using \u03bb \u2265 .70 as a strong criterion and \u03bb \u2265 .50 as the minimum acceptable value, "+strong.length+" of "+all.length+" loadings were strong, "+mid.length+" acceptable, and "+weak.length+" below .50"+(weak.length?" ("+weak.map(x=>x.i+" on "+x.f+", \u03bb = "+f3(x.est)).join("; ")+")":"")+". Squared loadings indicate that between "+Math.round(lo*lo*100)+"% and "+Math.round(hi*hi*100)+"% of the variance in the indicators was explained by their factors.";
+   if(plain)t3+=" A loading is the strength of the link between an item and its factor; larger values mean the item measures the factor more reliably.";
+   o.push(t3);if(weak.length)R.checks.push("Weak indicators (\u03bb < .50): "+weak.map(x=>x.i).join(", ")+".")}
+  const multi=new Set();SD.load.forEach(l=>{if(SD.load.filter(z=>z.i==l.i).length>1)multi.add(l.i)});
+  if(multi.size)R.checks.push("Cross-loading indicators detected ("+[...multi].join(", ")+"); omega and AVE treat each loading as given.");
+  const oc=SD.withs.filter(w=>!SD.latents.has(w.a)||!SD.latents.has(w.b));
+  if(oc.length)R.checks.push("Residual covariances among indicators or observed variables are present ("+oc.length+"); omega assumes uncorrelated errors.");
+  /* factor correlations */
+  const fc=SD.withs.filter(w=>SD.latents.has(w.a)&&SD.latents.has(w.b)&&w.est!=null);
+  if(stats.length>1){
+   o.push(H+" Factor correlations and discriminant validity");ref("fl");
+   if(fc.length){o.push("*Table 2.* Standardized factor "+(structural?"covariances (exogenous factors or disturbances)":"correlations"));
+    o.push(tbl(["Factor pair","r","SE","p"],fc.map(w=>[w.a+" \u2194 "+w.b,f3(w.est),w.se!=null?f3(w.se):"\u2014",w.p!=null?(w.p<.0005?"< .001":f3(w.p)):"\u2014"])));
+    const mx=fc.reduce((a,w)=>Math.abs(w.est)>Math.abs(a.est)?w:a,fc[0]);
+    const above=fc.filter(w=>Math.abs(w.est)>=.85);
+    let t4="Factor correlations ranged from "+f3(Math.min(...fc.map(w=>w.est)))+" to "+f3(Math.max(...fc.map(w=>w.est)))+"; the largest in absolute value was "+f3(mx.est)+" ("+mx.a+" with "+mx.b+"). Using .85 as the upper limit for discriminant validity, "+(above.length?above.length+" correlation(s) reached or exceeded the limit ("+above.map(w=>w.a+"\u2013"+w.b).join(", ")+"), so those factors may not be empirically distinct.":"all correlations fell below it, supporting discriminant validity.");
+    const cor={};fc.forEach(w=>{cor[w.a+"|"+w.b]=cor[w.b+"|"+w.a]=Math.abs(w.est)});
+    const flr=stats.map(s=>{const oth=stats.filter(z=>z.f!=s.f&&cor[s.f+"|"+z.f]!=null).map(z=>cor[s.f+"|"+z.f]);const mr=oth.length?Math.max(...oth):null;return{f:s.f,ave:s.ave,sq:s.ave!=null?Math.sqrt(s.ave):null,mr}});
+    o.push(t4);
+    o.push("*Table 3.* Fornell\u2013Larcker comparison");
+    o.push(tbl(["Factor","AVE","\u221aAVE","Largest |r| with another factor","\u221aAVE > |r|?"],flr.map(x=>[x.f,x.ave!=null?f3(x.ave):"\u2014",x.sq!=null?f3(x.sq):"\u2014",x.mr!=null?f3(x.mr):"\u2014",x.mr==null||x.sq==null?"\u2014":(x.sq>x.mr?"Yes":"No")])));
+    const bad=flr.filter(x=>x.mr!=null&&x.sq!=null&&x.sq<=x.mr);
+    o.push("By the Fornell and Larcker (1981) criterion, the square root of each factor\u2019s average variance extracted (AVE) should exceed its correlations with other factors; this was "+(bad.length?"not met for "+bad.map(x=>x.f).join(", ")+".":"met for every factor."));
+    if(bad.length)R.checks.push("Fornell\u2013Larcker criterion not met for "+bad.map(x=>x.f).join(", ")+".");
+    const need=stats.length*(stats.length-1)/2;if(fc.length<need){R.checks.push("Correlations for "+(need-fc.length)+" factor pair(s) are not in this output (they may be modeled as structural paths). Evaluate discriminant validity from the CFA run.")}
+   }else o.push("Factor correlations "+NP(R,"factor correlations (WITH statements in STDYX output)")+". If this is the structural run, report discriminant validity from the CFA output.")}
+  /* omega */
+  o.push(H+" Factor internal reliability");ref("mcd");
+  o.push("Internal reliability of each factor was estimated with McDonald\u2019s (1999) omega rather than Cronbach\u2019s alpha, because omega does not assume equal loadings. Omega was computed from the standardized loadings (\u03bb) and standardized residual variances (\u03b8) as \u03c9 = (\u03a3\u03bb)\u00b2 / [(\u03a3\u03bb)\u00b2 + \u03a3\u03b8], and AVE as \u03a3\u03bb\u00b2 / (\u03a3\u03bb\u00b2 + \u03a3\u03b8).");
+  o.push("*Table 4.* McDonald\u2019s omega and average variance extracted");
+  o.push(tbl(["Factor","Indicators","\u03c9","AVE"],stats.map(s=>[s.f,String(s.k),s.omega!=null?f3(s.omega):"n/a (single indicator)",s.ave!=null?f3(s.ave):"\u2014"])));
+  const lowO=stats.filter(s=>s.omega!=null&&s.omega<.7);
+  o.push("Using \u03c9 \u2265 .70 as the acceptable criterion, "+(stats.every(s=>s.omega!=null)?(lowO.length?"reliability was below the criterion for "+lowO.map(s=>s.f+" (\u03c9 = "+f3(s.omega)+")").join(", ")+".":"all factors met the criterion (\u03c9 = "+f3(Math.min(...stats.map(s=>s.omega)))+" to "+f3(Math.max(...stats.map(s=>s.omega)))+")."):"omega could not be computed for single-indicator factors.")+(plain?" Omega ranges from 0 to 1; higher values mean the items together measure the factor more consistently.":""));
+  if(lowO.length)R.checks.push("Omega below .70 for "+lowO.map(s=>s.f).join(", ")+".");
+ }else if(!SD){o.push(H+" Factor loadings, correlations, and reliability");o.push("Standardized loadings, factor correlations, and omega "+NP(R,"standardized results (STDYX) with BY statements")+".")}
+ /* 7 structural */
+ if(structural){
+  o.push(H+" Structural model");ref("cohen");
+  const ps=SD.paths.filter(x=>x.est!=null);
+  o.push("The structural model\u2019s fit is reported in the model fit section above. Standardized regression coefficients (\u03b2) are interpreted by magnitude first, using Cohen\u2019s (1988) conventional benchmarks (|\u03b2| near .10 small, .30 moderate, .50 large), with statistical significance secondary.");
+  o.push("*Table 5.* Standardized structural paths");
+  o.push(tbl(["Outcome","Predictor","\u03b2","SE","p","Magnitude"],ps.map(x=>[fl(x.to),fl(x.from),f3(x.est),x.se!=null?f3(x.se):"\u2014",x.p!=null?(x.p<.0005?"< .001":f3(x.p)):"\u2014",mag(x.est)])));
+  const sents=ps.map(x=>"A one standard deviation increase in "+fl(x.from)+" was associated with a "+f3(Math.abs(x.est))+" standard deviation "+(x.est>0?"increase":"decrease")+" in "+fl(x.to)+" (\u03b2 = "+f3(x.est)+(x.se!=null?", SE = "+f3(x.se):"")+(x.p!=null?", p "+pTxt(x.p):"")+"; "+mag(x.est)+" effect).");
+  o.push(sents.join(" "));
+  const outs=[...new Set(ps.map(x=>x.to))],rs=[];outs.forEach(n=>{const v=R.r2.lat[n]!=null?R.r2.lat[n]:R.r2.obs[n];if(v!=null)rs.push("The predictors accounted for "+Math.round(v*100)+"% of the variance in "+fl(n)+" (R\u00b2 = "+f3(v)+")"+(SD.latents.has(n)&&SD.resid[n]!=null?"; disturbance = "+f3(SD.resid[n]):"")+".");else rs.push("R\u00b2 for "+n+" "+NP(R,"R-SQUARE for "+n)+".")});
+  o.push(rs.join(" "));
+  o.push("A path diagram of the standardized solution should display the standardized loadings, standardized structural paths, factor correlations, and residual variances or disturbances; use the diagram tool below to draw it from this output.");
+  R.checks.push("Standardized estimates here are STDYX. If any predictor is binary or categorical, STDY is the more interpretable standardization for that path.");
+ }
+ /* 8 mediation */
+ if(R.eff&&R.eff.length&&!/^CFA/.test(C.type)){
+  o.push(H+" Mediation: direct, indirect, and total effects");
+  const rows=[];R.eff.forEach(e=>{if(e.direct)rows.push([fl(e.from)+" \u2192 "+fl(e.to),"Direct",f3(e.direct.est),f3(e.direct.se),pTxt(e.direct.p).replace("= ","")]);
+   e.spec.forEach(s=>rows.push([fl(e.from)+" \u2192 "+fl(e.to),"Indirect: "+s.path.join(" \u2192 "),f3(s.est),f3(s.se),pTxt(s.p).replace("= ","")]));
+   if(e.tind)rows.push([fl(e.from)+" \u2192 "+fl(e.to),"Total indirect",f3(e.tind.est),f3(e.tind.se),pTxt(e.tind.p).replace("= ","")]);
+   if(e.total)rows.push([fl(e.from)+" \u2192 "+fl(e.to),"Total",f3(e.total.est),f3(e.total.se),pTxt(e.total.p).replace("= ","")])});
+  o.push("*Table 6.* Standardized direct, indirect, and total effects");
+  o.push(tbl(["Effect of \u2192 on","Type","\u03b2","SE","p"],rows));
+  R.eff.forEach(e=>{const t=[];const tot=e.total?e.total.est:(e.direct&&e.tind?e.direct.est+e.tind.est:null);
+   const ind=e.tind?e.tind.est:(e.spec.length==1?e.spec[0].est:null);
+   t.push("For the effect of "+fl(e.from)+" on "+fl(e.to)+",");
+   if(ind!=null)t.push("the indirect effect was \u03b2 = "+f3(ind)+(e.tind?" (SE = "+f3(e.tind.se)+", p "+pTxt(e.tind.p)+")":"")+", a "+mag(ind)+" effect;");else t.push("the indirect effect "+NP(R,"total indirect effect for "+e.from+" to "+e.to)+";");
+   t.push(e.direct?"the direct effect was \u03b2 = "+f3(e.direct.est)+" (SE = "+f3(e.direct.se)+", p "+pTxt(e.direct.p)+")":"the direct effect "+NP(R,"direct effect for "+e.from+" to "+e.to));
+   t.push(tot!=null?"and the total effect was \u03b2 = "+f3(tot)+".":"and the total effect "+NP(R,"total effect")+".");
+   let s=t.join(" ").replace(/; and/,"; and").replace(/, ;/,";");
+   if(ind!=null&&tot!=null&&Math.abs(tot)>=.0005){
+    if(ind*tot<0||(e.direct&&e.direct.est*ind<0)){s+=" The direct and indirect effects had opposite signs (inconsistent mediation or suppression), so a proportion mediated is not interpretable.";R.checks.push("Opposite-signed direct and indirect effects for "+e.from+" to "+e.to+" (suppression).")}
+    else{const pm=ind/tot;s+=" The proportion mediated (indirect / total) was "+f3(pm)+" ("+(pm*100).toFixed(1)+"% of the total effect"+(e.direct?"; the direct effect remained "+f3(e.direct.est)+" after accounting for the mediator(s)":"")+"). "+(pm>=.8?"Mediation largely replaced the direct effect.":pm>=.4?"Mediation replaced a substantial part of the direct effect.":"Mediation replaced only a small part of the direct effect.")}}
+   o.push(s);
+   if(e.spec.length>1)o.push("Specific indirect effects: "+e.spec.map(x=>x.path.join(" \u2192 ")+" (\u03b2 = "+f3(x.est)+")").join("; ")+".")});
+  if(!R.boot)R.checks.push("Indirect-effect standard errors are delta-method estimates; bootstrap confidence intervals were not detected. Consider bootstrapping (CINTERVAL(BCBOOTSTRAP)).");
+ }else if(/mediation/i.test(C.type)&&!/^CFA/.test(C.type)){o.push(H+" Mediation: direct, indirect, and total effects");o.push("Indirect, direct, and total effects "+NP(R,"STANDARDIZED TOTAL, TOTAL INDIRECT, SPECIFIC INDIRECT, AND DIRECT EFFECTS (request MODEL INDIRECT and OUTPUT: STDYX)")+".")}
+ /* checks */
+ if(R.n!=null&&(R.n<200||(R.nfree&&R.n/R.nfree<10)))R.checks.push("Sample size may be small for this model (N = "+R.n+(R.nfree?", "+R.nfree+" free parameters; N:q = "+(R.n/R.nfree).toFixed(1)+":1":"")+"); Kline (2016) cites 10:1 as a common guideline.");
+ if(!R.cluster)R.checks.push("No clustering adjustment (TYPE = COMPLEX or TWOLEVEL) was detected. If cases are nested (for example, teachers within schools), address the nesting.");
+ if(SD&&SD.groups>1)R.checks.push("The output contains "+SD.groups+" groups; standardized estimates are reported for the first group only. Standardized coefficients generally should not be compared across groups.");
+ return o.join("\n\n")}
 
-$("#go").onclick=async()=>{const raw=$("#raw").value.trim();if(!raw||!sample)return;
- const ctx=[["Analysis type",$("#type").value],["Software",$("#sw").value],["Sample size",$("#n").value],["Estimator/missing data",$("#est").value],["Variables and topics",$("#var").value]].filter(x=>x[1]).map(x=>x[0]+": "+x[1]).join("\n");
- ctrl=new AbortController();$("#go").disabled=true;$("#stop").hidden=false;$("#outcard").hidden=false;$("#dl").hidden=true;$("#res").innerHTML="<p><small>Thinking…</small></p>";$("#stat").textContent="";
- try{const r=await sample(GUIDE+"\n\n"+STYLE[$("#lvl").value]+"\n\nCONTEXT FROM RESEARCHER:\n"+ctx+($("#ref").value.trim()?"\n\nREFERENCE ARTICLE. Use it ONLY to guide terminology, phrasing conventions, reporting order and cutoffs, and cite it in APA 7 in-text style (author, year) when you rely on it; if the author or year is not visible, use [Author, Year] as a placeholder. Paraphrase; never copy sentences or quote more than a few words. Do NOT take any numbers, results or sample details from it; all results must come from the pasted output. If the article conflicts with the guidelines above, follow the guidelines and flag the conflict under Things to double-check.\n"+$("#ref").value.trim().slice(0,60000):"")+"\n\nPASTED OUTPUT:\n"+raw,{modelTier:"complex",cache:false,signal:ctrl.signal,onText:({text})=>{out=text;$("#res").innerHTML=md(text)}});
-  out=r.text;$("#res").innerHTML=md(out);if(r.truncated)$("#stat").textContent="Output was cut off. Paste a smaller part of the output and run again.";if(dl)$("#dl").hidden=false}
- catch(e){if(e&&e.text){out=e.text;$("#res").innerHTML=md(out)}$("#stat").textContent=e&&e.code=="rate_limited"?"Too many requests. Please wait a minute and try again.":e&&e.code=="not_granted"?"Claude access was not granted for this page.":"Stopped or failed. "+((e&&e.message)||"")}
- $("#go").disabled=false;$("#stop").hidden=true};
-$("#stop").onclick=()=>ctrl&&ctrl.abort();
-$("#reff").onchange=async e=>{const f=e.target.files[0];if(f)$("#ref").value=await f.text()};
+function compareSection(runs,C,H){const o=[],ref=k=>C.refs.add(k);
+ const inv=/invariance|Multiple-group/i.test(C.type);const nm=["Configural","Metric","Scalar","Strict"];
+ o.push(H+" "+(inv?"Model comparison":"Summary of models"));
+ const rows=runs.map((R,i)=>{const F=R.fit,pr=i>0?runs[i-1].fit:null;let dchi="\u2014",dcfi="\u2014",drm="\u2014";
+  if(inv&&pr&&F.cfi!=null&&pr.cfi!=null){dcfi=f3(F.cfi-pr.cfi);}
+  if(inv&&pr&&F.rmsea!=null&&pr.rmsea!=null)drm=f3(F.rmsea-pr.rmsea);
+  if(inv&&pr&&F.chi!=null&&pr.chi!=null&&F.df!=null&&pr.df!=null){
+   if(/WLS/i.test(R.estimator||"")){dchi="use DIFFTEST"}
+   else{const a=F.df>=pr.df?F:pr,b=F.df>=pr.df?pr:F,dd=a.df-b.df;let T=a.chi-b.chi;
+    if(dd>0&&a.scf!=null&&b.scf!=null){const cd=(a.df*a.scf-b.df*b.scf)/dd;T=cd>0?(a.chi*a.scf-b.chi*b.scf)/cd:NaN;ref("sb")}
+    dchi=dd>0&&T>=0&&isFinite(T)?f2(T)+" ("+dd+"), p "+pTxt(chiP(T,dd)):"not computable"}}
+  const lab=inv&&runs.length<=4?nm[i]:"Model "+(i+1);const type=R.std&&R.std.paths.length&&R.std.latents.size?"SEM":(R.std&&R.std.latents.size?"CFA":"\u2014");
+  const row=[lab,type,F.chi!=null?f2(F.chi)+" ("+F.df+")":"\u2014",F.rmsea!=null?f3(F.rmsea)+(F.lo!=null?" ["+f3(F.lo)+", "+f3(F.hi)+"]":""):"\u2014",F.cfi!=null?f3(F.cfi):"\u2014",F.tli!=null?f3(F.tli):"\u2014",F.srmr!=null?f3(F.srmr):"\u2014"];
+  if(inv)row.push(dchi,dcfi,drm);return row});
+ o.push(tbl(["Model","Type","\u03c7\u00b2 (df)","RMSEA [90% CI]","CFI","TLI","SRMR"].concat(inv?["\u0394\u03c7\u00b2 (\u0394df)","\u0394CFI","\u0394RMSEA"]:[]),rows));
+ if(inv){ref("cheung");ref("chen");ref("kline");
+  let t="Invariance was evaluated by fitting the configural model first and then adding equality constraints, assuming the runs were pasted in order of increasing constraint. Following Cheung and Rensvold (2002) and Chen (2007), a constrained model was retained when CFI decreased by no more than .010 and RMSEA increased by no more than .015, and nested chi-square differences are reported for reference.";
+  const dec=[];for(let i=1;i<runs.length;i++){const a=runs[i].fit,b=runs[i-1].fit;if(a.cfi!=null&&b.cfi!=null&&a.rmsea!=null&&b.rmsea!=null){const ok=(a.cfi-b.cfi)>=-.0105&&(a.rmsea-b.rmsea)<=.0155;dec.push((runs.length<=4?nm[i]:"Model "+(i+1))+" invariance was "+(ok?"supported":"not supported")+" (\u0394CFI = "+f3(a.cfi-b.cfi)+", \u0394RMSEA = "+f3(a.rmsea-b.rmsea)+")")}}
+  if(dec.length)t+=" "+dec.join("; ")+".";
+  o.push(t);
+  o.push("Equality constraints are imposed on unstandardized estimates, so standardized (STDYX) values can differ across groups even when invariance holds, and standardized coefficients generally should not be compared across groups. Cohen\u2019s f\u00b2 is an alternative effect-size measure for comparing structural effects across groups.");
+  if(runs.some(r=>/WLS/i.test(r.estimator||"")))o.push("Because a weighted least squares estimator was used, chi-square differences must come from the DIFFTEST procedure; they are not computed here.")}
+ return o.join("\n\n")}
+
+function generate(raw,C){const runs=splitRuns(raw).map(parseRun).filter(R=>R.fit&&(R.fit.chi!=null||R.fit.cfi!=null||R.fit.rmsea!=null)||R.std);
+ if(!runs.length)return{md:"No Mplus output was recognized. Paste the text of the .out file, including MODEL FIT INFORMATION and STANDARDIZED MODEL RESULTS (STDYX).",runs:[]};
+ C.refs=new Set();const multi=runs.length>1,H=multi?"###":"##";const o=["# Results"];
+ const inv=/invariance|Multiple-group/i.test(C.type);
+ if(multi)o.push(compareSection(runs,C,"##"));
+ else if(inv){const R=runs[0];R.missing.push("comparison models (configural, metric, scalar runs)");o.push("## Model comparison\n\nNested model comparisons "+NP(R,"comparison models (configural, metric, scalar runs)")+". Paste each run's output one after another to obtain \u0394CFI, \u0394RMSEA, and \u0394\u03c7\u00b2.")}
+ const miss=[],chk=[];
+ runs.forEach((R,i)=>{if(multi){const SDx=R.std;const ty=SDx&&SDx.paths.length&&SDx.latents.size?"structural model":(SDx&&SDx.latents.size?"measurement model (CFA)":"model");o.push("## Model "+(i+1)+": "+ty)}
+  o.push(genRun(R,C,H));R.missing.forEach(x=>miss.push((multi?"Model "+(i+1)+": ":"")+x));R.checks.forEach(x=>chk.push((multi?"Model "+(i+1)+": ":"")+x))});
+ o.push("## Items to add");o.push(miss.length?miss.map(x=>"- "+x).join("\n"):"- None: all items required by the guidelines were found in the output.");
+ o.push("## Things to double-check");o.push(chk.length?chk.map(x=>"- "+x).join("\n"):"- No anomalies were detected by the automatic checks.");
+ o.push("*All numbers in this draft were copied or computed directly from the pasted output; wording is template-based, so edit it to fit your manuscript.*");
+ const keys=["hu","kline","fl","mcd","cohen","cheung","chen","sb"].filter(k=>C.refs.has(k));
+ if(keys.length){o.push("## References");o.push(keys.map(k=>REFS[k]).join("\n\n"))}
+ return{md:o.join("\n\n"),runs}}
+function parseLabels(s){const m={};s.split(/\n+/).forEach(l=>{const k=l.match(/^\s*([A-Za-z0-9_#$.\-]+)\s*[=:]\s*(.+?)\s*$/);if(k)m[k[1].toUpperCase()]=k[2]});return m}
+function diagramData(R){const SD=R.std,tn=n=>n.slice(0,10),lat=SD.latents;
+ return{latents:[...lat].map(n=>({name:tn(n),disturbance:SD.paths.some(p=>p.to==n)&&SD.resid[n]!=null?SD.resid[n]:null,indicators:SD.load.filter(l=>l.f==n).map(l=>({name:l.i.slice(0,8),loading:l.est,resid:SD.resid[l.i]!=null?SD.resid[l.i]:null}))})),
+  paths:SD.paths.filter(p=>lat.has(p.to)&&lat.has(p.from)).map(p=>({from:tn(p.from),to:tn(p.to),beta:p.est})),
+  covs:SD.withs.filter(w=>lat.has(w.a)&&lat.has(w.b)).map(w=>({a:tn(w.a),b:tn(w.b),r:w.est}))}}
+/*ENDCORE*/
+
+let out="",lastRuns=[];
+$("#go").onclick=()=>{const raw=$("#raw").value.trim();if(!raw){$("#stat").textContent="Paste your Mplus output first.";return}
+ const C={type:$("#type").value,lvl:$("#lvl").value,labels:parseLabels($("#lab").value),nText:$("#n").value.trim(),estText:$("#est").value.trim()};
+ try{const g=generate(raw,C);out=g.md;lastRuns=g.runs;$("#outcard").hidden=false;$("#res").innerHTML=md(out);$("#stat").textContent=g.runs.length?"Done: "+g.runs.length+" run(s) read.":"";}
+ catch(e){$("#stat").textContent="Could not process this output: "+(e&&e.message||e)}};
 $("#copy").onclick=async()=>{try{await navigator.clipboard.writeText(out);$("#copy").textContent="Copied!"}catch(e){const r=document.createRange();r.selectNodeContents($("#res"));const s=getSelection();s.removeAllRanges();s.addRange(r);$("#copy").textContent="Selected. Press Ctrl+C"}setTimeout(()=>$("#copy").textContent="Copy",2000)};
-$("#dl").onclick=async()=>{try{await dl.save({filename:"results-section.md",data:out})}catch(e){}};
+const dl={save:async({filename,data})=>{const u=URL.createObjectURL(new Blob([data],{type:filename.endsWith(".svg")?"image/svg+xml":"text/markdown"}));const a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}};
+$("#dl").onclick=()=>dl.save({filename:"results-section.md",data:out});
 /* ---- editable path diagram ---- */
 let M=null,ed=null,mode=null,first=null,sel=null,dr=null,uid=1;const S=$("#dg"),ID=()=>"i"+(uid++);
 const fmt=v=>{if(v==null||v==="")return"?";const x=parseFloat(String(v).replace("−","-"));if(isNaN(x)||/[a-z]/i.test(String(v)))return String(v);let s=x.toFixed(2);if(Math.abs(x)<1)s=s.replace("0.",".");return s.replace("-","−")};
-const DPROMPT='Extract the path diagram from this CFA/SEM output as JSON only (no prose, no code fences). Use STANDARDIZED estimates (STDYX / std.all). Schema: {"latents":[{"name":"short name, max 10 chars","disturbance":number or null (residual variance of an endogenous factor),"indicators":[{"name":"max 8 chars","loading":number or null,"resid":number or null (standardized residual variance)}]}],"paths":[{"from":"latent name","to":"latent name","beta":number or null}],"covs":[{"a":"latent name","b":"latent name","r":number or null}]}. Include only what appears in the output. Use null for anything missing; never invent numbers. For mediation, list the direct paths only.';
 function build(d){const nodes=[],edges=[],by={};(d.latents||[]).forEach(L=>{const n={id:ID(),t:"lat",label:L.name,d:L.disturbance};nodes.push(n);by[L.name]=n;(L.indicators||[]).forEach(I=>{const o={id:ID(),t:"obs",label:I.name,e:I.resid,par:n.id};nodes.push(o);edges.push({id:ID(),k:"load",a:n.id,b:o.id,v:I.loading})})});
  (d.paths||[]).forEach(p=>{if(by[p.from]&&by[p.to])edges.push({id:ID(),k:"path",a:by[p.from].id,b:by[p.to].id,v:p.beta})});
  (d.covs||[]).forEach(p=>{if(by[p.a]&&by[p.b])edges.push({id:ID(),k:"cov",a:by[p.a].id,b:by[p.b].id,v:p.r})});
@@ -144,7 +398,10 @@ $("#ai").onclick=()=>{const l=M.nodes.find(n=>n.id==sel&&n.t=="lat");if(!l){$("#
 $("#cp").onclick=()=>{mode="path";first=null;$("#dstat").textContent="Click the source factor, then the target factor."};$("#cc").onclick=()=>{mode="cov";first=null;$("#dstat").textContent="Click two factors to connect them with a correlation."};
 $("#rl").onclick=()=>{layout(M);drawD()};
 $("#dsv").onclick=async()=>{if(!dl){$("#dstat").textContent="Download isn’t available in this view.";return}const k=sel;sel=null;drawD();const s=new XMLSerializer().serializeToString(S);sel=k;drawD();try{await dl.save({filename:"path-diagram.svg",data:s})}catch(e){}};
-$("#dd").onclick=async()=>{const raw=$("#raw").value.trim();if(!sample||!raw){$("#dstat").textContent="Paste your output above first.";return}$("#dd").disabled=true;$("#dstat").textContent="Reading the model…";
- try{const d=await sample.json(DPROMPT+"\n\nOUTPUT:\n"+raw,{modelTier:"complex",cache:false});M=build(d);sel=null;ed=null;$("#edbox").hidden=true;$("#dwrap").hidden=false;drawD();$("#dstat").textContent="Drag shapes to move them. Click a shape, number, or label to edit it."}
- catch(e){$("#dstat").textContent="Couldn’t read a model from this output. "+((e&&e.message)||"")}$("#dd").disabled=false};
+
+$("#dd").onclick=()=>{const raw=$("#raw").value.trim();if(!raw){$("#dstat").textContent="Paste your output above first.";return}
+ try{const runs=splitRuns(raw).map(parseRun).filter(R=>R.std&&R.std.latents.size);if(!runs.length){$("#dstat").textContent="No standardized (STDYX) factor results found in this output.";return}
+  const R=runs.slice().reverse().find(r=>r.std.paths.length)||runs[runs.length-1];
+  M=build(diagramData(R));sel=null;ed=null;$("#edbox").hidden=true;$("#dwrap").hidden=false;drawD();$("#dstat").textContent="Drag shapes to move them. Click a shape, number, or label to edit it."}
+ catch(e){$("#dstat").textContent="Couldn\u2019t read a model from this output. "+((e&&e.message)||"")}};
 </script></main></body></html>
