@@ -1,0 +1,714 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Literature Review Workbench</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+/* Layout concept: a bench with four stations in the order the work happens (Add, Library, Synthesis, Review).
+   Extracted fields carry their numbers 1-8; the review station reads like a manuscript page. */
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --sunk:#EAEEF3; --ink:#131C26; --muted:#566373; --line:#D9DFE6;
+  --accent:#0A5C75; --accent-ink:#FFFFFF; --accent-soft:#DCEEF3; --mark:#FFE9A8; --mark-ink:#4A3600;
+  --ok:#1B7F4B; --ok-soft:#DDF1E5; --warn:#9A5B00; --warn-soft:#FBEBCF; --bad:#B3261E; --bad-soft:#FADDDA;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --f-serif:"Newsreader",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0E141B; --surface:#161E27; --sunk:#1D2733; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2B3746;
+  --accent:#5CC0DB; --accent-ink:#06222B; --accent-soft:#14323C; --mark:#5B4A12; --mark-ink:#FFEFB8;
+  --ok:#5CCB92; --ok-soft:#14372A; --warn:#E8B05C; --warn-soft:#3A2B10; --bad:#F2877F; --bad-soft:#3E1B18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E141B; --surface:#161E27; --sunk:#1D2733; --ink:#E7ECF2; --muted:#9AA7B6; --line:#2B3746;
+  --accent:#5CC0DB; --accent-ink:#06222B; --accent-soft:#14323C; --mark:#5B4A12; --mark-ink:#FFEFB8;
+  --ok:#5CCB92; --ok-soft:#14372A; --warn:#E8B05C; --warn-soft:#3A2B10; --bad:#F2877F; --bad-soft:#3E1B18; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:1180px;margin:0 auto}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;font-weight:600;text-wrap:balance}
+.mono{font-family:var(--f-mono)}
+.label{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.bar{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:20px;padding-block:12px;flex-wrap:wrap}
+.brand{font-family:var(--f-serif);font-size:21px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand small{display:block;font:400 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+nav.steps{display:flex;gap:4px;overflow-x:auto;flex:1;min-width:0}
+nav.steps button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;font-weight:500;color:var(--muted);white-space:nowrap;display:flex;gap:8px;align-items:center}
+nav.steps button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.steps .pill{font:500 11px var(--f-mono);background:var(--sunk);color:var(--muted);border-radius:99px;padding:1px 7px}
+#status{font:400 12px var(--f-mono);color:var(--muted);min-height:1em}
+
+main{padding-top:24px}
+.view-title{font-family:var(--f-serif);font-size:30px;line-height:1.15;letter-spacing:-.01em;margin-bottom:6px}
+.lede{color:var(--muted);max-width:68ch;margin:0 0 20px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px}
+@media(max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+/* buttons */
+.btn{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:6px;padding:8px 14px;font-weight:500}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{background:var(--sunk);filter:none}
+.btn.danger{background:transparent;color:var(--bad);border-color:var(--line)}
+.btn.danger.armed{background:var(--bad);color:#fff;border-color:var(--bad)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;filter:none}
+.btn.sm{padding:4px 10px;font-size:13px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* add */
+.drop{border:1.5px dashed var(--line);background:var(--surface);border-radius:10px;padding:34px 20px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop strong{font-family:var(--f-serif);font-size:20px;font-weight:600}
+.drop span{color:var(--muted)}
+details.paste{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+details.paste summary{cursor:pointer;font-weight:500}
+details.paste textarea{margin-top:10px}
+textarea,input[type=text]{width:100%;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+textarea{resize:vertical;min-height:84px;line-height:1.5}
+select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.jobs{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.job{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.job .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.job .st{font:400 12px var(--f-mono);color:var(--muted)}
+.job.done .st{color:var(--ok)} .job.fail .st{color:var(--bad)}
+.spin{width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+.fieldlist{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 18px 8px}
+.fieldlist ol{list-style:none;margin:10px 0 14px;padding:0;display:flex;flex-direction:column;gap:7px}
+.fieldlist li{display:flex;gap:10px;align-items:baseline}
+.num{font:500 11px var(--f-mono);background:var(--mark);color:var(--mark-ink);border-radius:4px;min-width:22px;text-align:center;padding:1px 5px;flex:none}
+.fieldlist ul{margin:8px 0 14px;padding-left:18px;color:var(--muted)}
+
+/* library */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.toolbar .sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{background:var(--surface);border:0;padding:6px 12px;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.lib{display:grid;grid-template-columns:290px minmax(0,1fr);gap:22px;align-items:start}
+@media(max-width:860px){.lib{grid-template-columns:minmax(0,1fr)}}
+.plist{display:flex;flex-direction:column;gap:6px;max-height:70vh;overflow:auto}
+.pitem{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.pitem[aria-current="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.pitem .t{font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.pitem .m{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{font:500 11px var(--f-mono);border-radius:4px;padding:1px 6px;background:var(--sunk);color:var(--muted)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.warn{background:var(--warn-soft);color:var(--warn)}
+.editor{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;min-width:0}
+.editor h2{font-family:var(--f-serif);font-size:24px;line-height:1.2;margin-bottom:12px}
+.checks{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 16px;padding:10px 12px;background:var(--sunk);border-radius:8px}
+.checks label{display:flex;gap:8px;align-items:center}
+.group{margin-top:22px}
+.group>h3{font:500 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.field{margin-bottom:14px}
+.field>label{display:flex;gap:8px;align-items:center;font-weight:600;margin-bottom:5px}
+.field .hint{font-weight:400;color:var(--muted);font-size:13px}
+.fields2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
+@media(max-width:640px){.fields2{grid-template-columns:minmax(0,1fr)}}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table.matrix{border-collapse:collapse;width:100%;min-width:1100px;font-size:13px}
+table.matrix th{position:sticky;top:0;background:var(--sunk);text-align:left;padding:8px 10px;font:500 11px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap}
+table.matrix td{vertical-align:top;padding:10px;border-bottom:1px solid var(--line);min-width:120px}
+table.matrix tr{cursor:pointer} table.matrix tbody tr:hover{background:var(--accent-soft)}
+table.matrix .clamp{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+table.matrix td.t{min-width:200px;font-weight:600}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--muted)}
+.empty strong{display:block;color:var(--ink);font-family:var(--f-serif);font-size:20px;margin-bottom:4px}
+
+/* synthesis + review */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+.card h3{font-size:16px;margin-bottom:4px}
+.card p.sub{margin:0 0 10px;color:var(--muted);font-size:13px}
+.notice{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:13px;margin-bottom:14px}
+.notice.err{background:var(--bad-soft);color:var(--bad)}
+.manuscript{font-family:var(--f-serif);font-size:18px;line-height:1.65;min-height:420px}
+.manuscript textarea,textarea.ms{font-family:var(--f-serif);font-size:18px;line-height:1.65;min-height:420px}
+.prose{font-family:var(--f-serif);font-size:18px;line-height:1.65;max-width:70ch;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:26px 30px}
+.prose h2{font-family:var(--f-serif);font-size:24px;margin:1.2em 0 .4em} .prose h2:first-child{margin-top:0}
+.prose h3{font-size:19px;margin:1em 0 .3em}
+.prose p{margin:0 0 1em}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px}
+.opts label.o{display:flex;flex-direction:column;gap:4px;font-weight:500}
+.radio{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);cursor:pointer}
+.radio:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.radio small{display:block;color:var(--muted);font-weight:400}
+.refs{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-family:var(--f-serif);font-size:16px}
+.refs li{padding-left:2em;text-indent:-2em}
+.lmap{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
+.lmap th,.lmap td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.prose p.hyp{margin-left:2em}.lmap .gh th{background:#92D050;color:#000;text-align:center}.lmap textarea{min-height:36px;border:0;padding:2px 4px;background:transparent}.lmap th{font:500 11px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--sunk)}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="bar">
+      <div class="brand">Literature Review Workbench<small>Extract. Collect. Synthesize. Write.</small></div>
+      <nav class="steps" id="nav" aria-label="Steps"></nav>
+      <div id="status" role="status" aria-live="polite"></div>
+    </div>
+  </header>
+  <main id="main"></main>
+</div>
+<input type="file" id="file" multiple accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown" hidden>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- field definitions ---------- */
+var CORE=[
+ {k:"title",n:1,label:"Title",kind:"line"},
+ {k:"authors",n:2,label:"Author(s)",kind:"line"},
+ {k:"year",n:3,label:"Publication year",kind:"line"},
+ {k:"journal",n:4,label:"Journal or book",kind:"line"},
+ {k:"researchQuestion",n:5,label:"Research question or problem statement",kind:"area"},
+ {k:"methodology",n:6,label:"Methodology",kind:"area",hint:"Design, data, sample size, analysis"},
+ {k:"findings",n:7,label:"Key findings",kind:"area"},
+ {k:"recommendations",n:8,label:"Recommendations for future study",kind:"area"}
+];
+var EXTRA=[
+ {k:"theory",label:"Theoretical framework",hint:"Theories used and why"},
+ {k:"context",label:"Context or setting",hint:"Where, which industry or population"},
+ {k:"variables",label:"Key variables and definitions",hint:"How the authors define each construct"},
+ {k:"relationships",label:"Variable relationships",hint:"What affects what; significant, insignificant, moderated"},
+ {k:"sample",label:"Sample and location",hint:"Limits how far the findings generalize"},
+ {k:"limitations",label:"Limitations and gaps",hint:"Acknowledged by the authors"},
+ {k:"citation",label:"Full reference (APA 7)",hint:"Check against the paper before submitting"},
+ {k:"inText",label:"In-text citation",hint:"Example: Smith et al., 2021",line:true},
+ {k:"theme",label:"Theme or group",hint:"Your label, used to group studies in the review",line:true},
+ {k:"credibility",label:"Journal credibility note",hint:"Indexing and impact factor. This is not in the paper; look it up",line:true},
+ {k:"notes",label:"My notes",hint:"Anything you want the review to use"}
+];
+var ALLK=CORE.concat(EXTRA).map(function(f){return f.k});
+
+/* ---------- state ---------- */
+var S={
+  papers:[], sel:null, view:"add", libMode:"list", jobs:[], busy:{}, reviewMode:"edit", armed:null,
+  project:{topic:"",structure:"template",length:"1500",extra:"",review:"",prevReview:"",frame:"",quant:true,tables:{t1:[],t2:[]},
+    synth:emptySyn()}
+};
+var cap={db:null,uid:null,sample:null,downloads:null,coll:null,ready:false,storage:"local"};
+var timers={};
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function uid(){return "p_"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function getP(id){return S.papers.filter(function(p){return p.id===id})[0]}
+function status(t,ms){var el=$("#status");el.textContent=t||"";if(ms){clearTimeout(status.t);status.t=setTimeout(function(){el.textContent=""},ms)}}
+
+/* ---------- storage: private db when available, else this browser ---------- */
+var LS="litreview.workbench.v1";
+function lsRead(){try{var j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.papers=j.papers||[];Object.assign(S.project,j.project||{});S.project.synth=Object.assign(emptySyn(),S.project.synth||{})}}catch(e){}}
+function lsWrite(){try{localStorage.setItem(LS,JSON.stringify({papers:S.papers,project:S.project}))}catch(e){}}
+function writeDoc(id,obj){
+  if(cap.coll){return cap.coll.doc(id).set(obj).catch(function(e){status("Could not save: "+(e&&e.message||"error"))})}
+  lsWrite();return Promise.resolve();
+}
+function savePaper(p){clearTimeout(timers[p.id]);timers[p.id]=setTimeout(function(){delete timers[p.id];writeDoc(p.id,p).then(function(){status("Saved",1200)})},500)}
+function saveProject(){clearTimeout(timers.project);timers.project=setTimeout(function(){delete timers.project;writeDoc("project",S.project)},600)}
+function removePaper(id){
+  S.papers=S.papers.filter(function(p){return p.id!==id});
+  if(cap.coll){cap.coll.doc(id).delete().catch(function(){})}else lsWrite();
+}
+function onSnap(snap){
+  var papers=[],proj=null;
+  snap.docs.forEach(function(d){var v=d.data();if(!v)return;if(d.id==="project")proj=v;else if(d.id.indexOf("p_")===0)papers.push(v)});
+  papers=papers.map(function(p){return timers[p.id]?(getP(p.id)||p):p});
+  S.papers.forEach(function(p){if(timers[p.id]&&!papers.some(function(q){return q.id===p.id}))papers.push(p)});
+  papers.sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)});
+  S.papers=papers;
+  if(proj&&!timers.project){var run=S.busy.review;var keep=run?S.project.review:null;S.project=Object.assign({},S.project,proj);S.project.synth=Object.assign(emptySyn(),proj.synth||{});if(keep!==null)S.project.review=keep}
+  if(S.sel&&!getP(S.sel))S.sel=null;
+  cap.loaded=true;
+  var a=document.activeElement;
+  if(a&&(a.tagName==="TEXTAREA"||a.tagName==="INPUT")&&$("#main").contains(a)){renderNav()}else render();
+}
+async function initCaps(){
+  var use=window.claude&&window.claude.use?function(n){return window.claude.use(n).catch(function(){return null})}:function(){return Promise.resolve(null)};
+  var r=await Promise.all([use("db"),use("user"),use("sample"),use("downloads")]);
+  cap.sample=r[2];cap.downloads=r[3];
+  try{
+    if(r[0]&&r[1]){cap.uid=await r[1].id();if(cap.uid){cap.db=r[0];cap.coll=cap.db.collection("data/users/"+cap.uid);cap.storage="account"}}
+  }catch(e){cap.coll=null}
+  if(cap.coll){
+    S.papers=[];
+    var t=setTimeout(function(){if(!cap.loaded){status("Your library is slow to load")}},10000);
+    cap.coll.onSnapshot(function(s){clearTimeout(t);onSnap(s)},function(){cap.coll=null;cap.storage="local";lsRead();render();status("Account storage unavailable. Using this browser.")});
+  }else{lsRead()}
+  cap.ready=true;render();
+}
+
+/* ---------- reading files ---------- */
+async function pdfText(file){
+  if(!window.pdfjsLib)throw new Error("The PDF reader did not load. Paste the text instead.");
+  try{pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"}catch(e){}
+  var buf=await file.arrayBuffer();
+  var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  var pages=[];
+  for(var i=1;i<=pdf.numPages;i++){
+    var pg=await pdf.getPage(i),tc=await pg.getTextContent(),line="",lastY=null,out=[];
+    tc.items.forEach(function(it){
+      var y=it.transform?it.transform[5]:0;
+      if(lastY!==null&&Math.abs(y-lastY)>2){out.push(line);line=""}
+      line+=it.str;if(it.hasEOL){out.push(line);line=""}
+      lastY=y;
+    });
+    out.push(line);pages.push(out.join("\n"));
+  }
+  return pages.join("\n\n");
+}
+function prepText(t){
+  t=t.replace(/\r/g,"").replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").trim();
+  var re=/\n\s*(references|reference list|bibliography|works cited|literature cited)\s*\n/ig,m,idx=-1;
+  while((m=re.exec(t)))idx=m.index;
+  if(idx>t.length*0.5)t=t.slice(0,idx);
+  if(t.length>70000)t=t.slice(0,70000)+"\n[text cut for length]";
+  return t;
+}
+
+/* ---------- Claude calls ---------- */
+function errCopy(e){
+  var c=e&&e.code;
+  if(c==="not_granted")return "Claude access was declined for this page. Reload and allow it to run extraction.";
+  if(c==="rate_limited")return "Too many requests at once. Wait a minute and try again.";
+  if(c==="cancelled")return "Stopped.";
+  if(e&&e.name==="SyntaxError")return "Claude's answer could not be read. Try again.";
+  return (e&&e.message)||"Something went wrong. Try again.";
+}
+function flat(v){if(Array.isArray(v))return v.map(function(x){return "- "+x}).join("\n");if(v&&typeof v==="object")return JSON.stringify(v);return v==null?"":String(v)}
+async function extract(text,signal){
+  var prompt="You are extracting structured notes from one research paper for a literature review. Use ONLY what the paper text says. If the paper does not state something, write \"Not stated in the paper\". Never invent authors, years, statistics or citations. Keep each field concise (1 to 4 sentences, or short hyphen bullets for lists).\n\n"+
+  "Return one JSON object with exactly these string keys:\n"+
+  "title: full title\n"+
+  "authors: all authors as \"Surname, I., Surname, I.\" (APA style)\n"+
+  "year: publication year (digits only)\n"+
+  "journal: journal or book name with volume/issue/pages if shown\n"+
+  "researchQuestion: the research question, problem statement, objectives or hypotheses\n"+
+  "methodology: design (experimental, survey, simulation, review, etc.), data, sample size, analysis method\n"+
+  "findings: the main results, with key numbers where given\n"+
+  "recommendations: the authors' recommendations or suggestions for future research\n"+
+  "theory: theories or frameworks the study relies on, and why\n"+
+  "context: the setting, industry, population or country\n"+
+  "variables: key variables or constructs and how the authors define them\n"+
+  "relationships: relationships between variables and whether each was significant, insignificant, or moderated\n"+
+  "sample: who was studied, how many, and where\n"+
+  "limitations: limitations or gaps the authors acknowledge\n"+
+  "citation: full APA 7 reference built only from details in the paper (DOI if present)\n"+
+  "inText: in-text citation such as \"Smith, 2021\", \"Smith & Lee, 2021\" or \"Smith et al., 2021\"\n\n"+
+  "Return JSON only, no commentary.\n\nPAPER TEXT:\n"+text;
+  return cap.sample.json(prompt,{signal:signal,modelTier:"default"});
+}
+function newPaper(d,name){
+  var p={id:uid(),createdAt:Date.now(),updatedAt:Date.now(),fileName:name||"",include:true,verified:false};
+  ALLK.forEach(function(k){p[k]=d&&d[k]!=null?flat(d[k]):""});
+  return p;
+}
+function paperBrief(p){
+  var o={cite:p.inText||((p.authors||"").split(",")[0]+", "+p.year)};
+  ["title","year","researchQuestion","methodology","findings","recommendations","theory","context","variables","relationships","sample","limitations","theme","notes"].forEach(function(k){if(p[k]&&!/^not stated/i.test(p[k].trim()))o[k]=p[k]});
+  return o;
+}
+function included(){return S.papers.filter(function(p){return p.include!==false})}
+
+/* ---------- job queue ---------- */
+var queue=[],running=false,ctl=null;
+function addJobs(files){
+  if(!cap.sample){status("Extraction needs Claude access, which is not available in this view.");return}
+  files.forEach(function(f){queue.push({id:uid(),name:f.name,file:f,status:"Queued",state:"wait"})});
+  S.jobs=S.jobs.concat(queue.filter(function(j){return S.jobs.indexOf(j)<0}));
+  renderJobs();runQueue();
+}
+async function addPaste(){
+  var t=$("#paste"); if(!t||!t.value.trim())return;
+  if(!cap.sample){status("Extraction needs Claude access, which is not available in this view.");return}
+  var j={id:uid(),name:"Pasted text",text:t.value,status:"Queued",state:"wait"};
+  queue.push(j);S.jobs.push(j);t.value="";renderJobs();runQueue();
+}
+async function runQueue(){
+  if(running)return;running=true;
+  while(queue.length){
+    var j=queue.shift();
+    ctl=new AbortController();
+    try{
+      j.state="run";j.status="Reading file";renderJobs();
+      var text=j.text;
+      if(text==null){
+        var isPdf=/\.pdf$/i.test(j.name)||(j.file&&j.file.type==="application/pdf");
+        text=isPdf?await pdfText(j.file):await j.file.text();
+      }
+      text=prepText(text);
+      if(text.length<400)throw new Error("Almost no text found. A scanned PDF needs OCR first, or paste the text.");
+      j.status="Extracting with Claude";renderJobs();
+      var d=await extract(text,ctl.signal);
+      var p=newPaper(d,j.name);
+      S.papers.push(p);savePaper(p);
+      j.state="done";j.status="Done";j.paperId=p.id;S.sel=p.id;
+      var hs=$("#hdrcount");renderNav();
+    }catch(e){j.state="fail";j.status=errCopy(e);if(e&&e.code==="cancelled"){queue.length=0}}
+    renderJobs();
+  }
+  running=false;ctl=null;
+}
+
+/* ---------- rendering ---------- */
+var TABS=[["add","Add papers"],["library","Library"],["synthesis","Synthesis"],["review","Review"]];
+function renderNav(){
+  var v=S.papers.filter(function(p){return p.verified}).length;
+  $("#nav").innerHTML=TABS.map(function(t){
+    var pill=t[0]==="library"?'<span class="pill">'+S.papers.length+(S.papers.length?" · "+v+" checked":"")+'</span>':"";
+    return '<button data-act="tab" data-v="'+t[0]+'"'+(S.view===t[0]?' aria-current="page"':"")+'>'+t[1]+pill+'</button>';
+  }).join("");
+}
+function render(){
+  S.project.tables=S.project.tables||{t1:[],t2:[]};
+  renderNav();
+  var m=$("#main");
+  m.innerHTML=S.view==="add"?viewAdd():S.view==="library"?viewLibrary():S.view==="synthesis"?viewSynthesis():viewReview();
+  if(S.view==="add"){renderJobs();bindDrop()}
+  $$("textarea").forEach(grow);
+}
+function grow(t){if(t.id==="paste")return;t.style.height="auto";t.style.height=Math.max(t.scrollHeight+2,84)+"px"}
+function noClaude(){return cap.ready&&!cap.sample?'<div class="notice">Claude access is not available in this view, so automatic extraction and drafting are off. You can still add papers by hand and edit every field.</div>':""}
+
+function viewAdd(){
+  var list=CORE.map(function(f){return '<li><span class="num">'+f.n+'</span><span>'+esc(f.label)+'</span></li>'}).join("");
+  var ex=EXTRA.filter(function(f){return !f.line||f.k==="inText"}).slice(0,7).map(function(f){return "<li>"+esc(f.label)+"</li>"}).join("");
+  return '<h1 class="view-title">Add research papers</h1>'+
+  '<p class="lede">Upload a paper and the eight fields are filled in for you. Every paper lands in your library, and the library feeds the synthesis and the written review.</p>'+topicBox()+
+  noClaude()+
+  '<div class="grid2"><div>'+
+   '<div class="drop" id="drop"><strong>Drop papers here</strong><span>PDF, TXT or MD. Several files at once is fine.</span><button class="btn" data-act="pick">Choose files</button></div>'+
+   '<details class="paste"><summary>Paste the text instead</summary><textarea id="paste" placeholder="Paste the full text of the paper, or the abstract plus the methods and results sections"></textarea><div class="row" style="margin-top:10px"><button class="btn sm" data-act="extract-paste">Extract from pasted text</button><button class="btn ghost sm" data-act="manual">Add an empty record</button></div></details>'+
+   '<div class="jobs" id="jobs"></div>'+
+  '</div><aside class="fieldlist"><div class="label">Extracted from every paper</div><ol>'+list+'</ol>'+
+  '<div class="label">Also captured for the review</div><ul>'+ex+'<li>Full reference and in-text citation</li></ul></aside></div>';
+}
+function renderJobs(){
+  var el=$("#jobs");if(!el)return;
+  var running=S.jobs.some(function(j){return j.state==="run"||j.state==="wait"});
+  el.innerHTML=S.jobs.map(function(j){
+    var sp=(j.state==="run")?'<span class="spin"></span>':"";
+    var go=j.paperId?' <button class="btn ghost sm" data-act="open" data-id="'+j.paperId+'">Check fields</button>':"";
+    return '<div class="job '+j.state+'">'+sp+'<div class="nm">'+esc(j.name)+'</div><div class="st">'+esc(j.status)+'</div>'+go+'</div>';
+  }).join("")+(running?'<div><button class="btn ghost sm" data-act="stopjobs">Stop</button></div>':(S.jobs.length?'<div class="row"><button class="btn sm" data-act="tab" data-v="library">Go to library</button><button class="btn ghost sm" data-act="clearjobs">Clear list</button></div>':""));
+}
+function bindDrop(){
+  var d=$("#drop");if(!d)return;
+  ["dragenter","dragover"].forEach(function(ev){d.addEventListener(ev,function(e){e.preventDefault();d.classList.add("over")})});
+  ["dragleave","drop"].forEach(function(ev){d.addEventListener(ev,function(e){e.preventDefault();d.classList.remove("over")})});
+  d.addEventListener("drop",function(e){addJobs(Array.prototype.slice.call(e.dataTransfer.files||[]))});
+}
+
+function pitem(p){
+  var au=(p.authors||"").split(/,\s*(?=[A-Z][^,]*,)|;/)[0]||"Unknown author";
+  return '<button class="pitem" data-act="open" data-id="'+p.id+'"'+(S.sel===p.id?' aria-current="true"':"")+'>'+
+   '<span class="t">'+esc(p.title||"Untitled paper")+'</span>'+
+   '<span class="m"><span>'+esc(p.inText||au)+(p.year&&!(p.inText||"").includes(p.year)?" "+esc(p.year):"")+'</span>'+
+   (p.verified?'<span class="tag ok">checked</span>':'<span class="tag warn">to check</span>')+
+   (old(p)?'<span class="tag warn">10+ yrs</span>':"")+(p.include===false?'<span class="tag">excluded</span>':"")+'</span></button>';
+}
+function viewLibrary(){
+  var head='<h1 class="view-title">Library</h1><p class="lede">Check each extracted field against the paper, fix anything that is off, and add your own notes. Mark a paper as checked when you trust it.</p>'+guidePanel();
+  if(!S.papers.length)return head+'<div class="empty"><strong>No papers yet</strong>Upload a paper on the Add papers step and its eight fields appear here.<div style="margin-top:14px"><button class="btn" data-act="tab" data-v="add">Add a paper</button></div></div>';
+  var bar='<div class="toolbar"><div class="seg"><button data-act="mode" data-m="list" aria-pressed="'+(S.libMode==="list")+'">Papers</button><button data-act="mode" data-m="matrix" aria-pressed="'+(S.libMode==="matrix")+'">Summary table</button></div><span class="sp"></span>'+
+   '<button class="btn ghost sm" data-act="csv">Download matrix (CSV)</button><button class="btn sm" data-act="tab" data-v="synthesis">Next: Synthesis</button></div>';
+  if(S.libMode==="matrix"){
+    var th=CORE.map(function(f){return '<th><span class="num">'+f.n+'</span> '+esc(f.label.replace(" or problem statement","").replace("Recommendations for future study","Future study"))+'</th>'}).join("");
+    var rows=S.papers.map(function(p){
+      return '<tr data-act="open" data-id="'+p.id+'">'+CORE.map(function(f){
+        var v=p[f.k]||"";return '<td'+(f.k==="title"?' class="t"':"")+'><div class="clamp">'+esc(v)+'</div></td>';
+      }).join("")+'</tr>';
+    }).join("");
+    return head+bar+'<div class="tablewrap"><table class="matrix"><thead><tr>'+th+'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+  var p=getP(S.sel)||S.papers[0];S.sel=p.id;
+  return head+bar+'<div class="lib"><div class="plist">'+S.papers.map(pitem).join("")+'</div>'+editor(p)+'</div>';
+}
+function editor(p){
+  function fld(f){
+    var id="f_"+f.k;
+    var lab='<label for="'+id+'">'+(f.n?'<span class="num">'+f.n+'</span>':"")+esc(f.label)+(f.hint?' <span class="hint">'+esc(f.hint)+'</span>':"")+'</label>';
+    var inp=(f.kind==="line"||f.line)?'<input type="text" id="'+id+'" data-bind="paper|'+p.id+'|'+f.k+'" value="'+esc(p[f.k]||"")+'">':'<textarea id="'+id+'" data-bind="paper|'+p.id+'|'+f.k+'">'+esc(p[f.k]||"")+'</textarea>';
+    return '<div class="field">'+lab+inp+'</div>';
+  }
+  var core1=CORE.slice(0,4).map(fld).join(""),core2=CORE.slice(4).map(fld).join("");
+  var ex1=EXTRA.filter(function(f){return !f.line&&f.k!=="notes"&&f.k!=="citation"}).map(fld).join("");
+  var ex2=EXTRA.filter(function(f){return f.k==="citation"}).map(fld).join("")+'<div class="fields2">'+EXTRA.filter(function(f){return f.line}).map(fld).join("")+'</div>'+EXTRA.filter(function(f){return f.k==="notes"}).map(fld).join("");
+  return '<div class="editor"><h2>'+esc(p.title||"Untitled paper")+'</h2>'+
+   '<div class="checks"><label><input type="checkbox" data-chk="verified" data-id="'+p.id+'"'+(p.verified?" checked":"")+'> I checked this against the paper</label>'+
+   '<label><input type="checkbox" data-chk="include" data-id="'+p.id+'"'+(p.include!==false?" checked":"")+'> Use in the review</label>'+
+   '<span style="flex:1"></span><button class="btn danger sm'+(S.armed===p.id?" armed":"")+'" data-act="del" data-id="'+p.id+'">'+(S.armed===p.id?"Click again to delete":"Delete paper")+'</button></div>'+
+   (p.fileName?'<div class="label" style="margin-bottom:10px">Source: '+esc(p.fileName)+'</div>':"")+
+   '<div class="group"><h3>Core extraction</h3><div class="fields2">'+core1+'</div>'+core2+'</div>'+
+   '<div class="group"><h3>Used to write the review</h3>'+ex1+ex2+'</div></div>';
+}
+
+function viewSynthesis(){
+  var n=included().length,sy=S.project.synth,busy=S.busy.synth;
+  var qs=[["1","themes","What themes or patterns appear across the studies?","Group studies that find the same thing or use the same approach."],
+ ["2","gaps","What gaps or inconsistencies exist?","Methods, regions, time periods, neglected topics, conflicting results."],
+ ["3","recommendations","What do the authors recommend for future research?","Pulled from field 8 of each paper."],
+ ["4.1","theoreticalArgument","Literature-based theoretical argument","Paragraphs a to d: background, what studies show, the gap and the research question, the aim. Useful for Chapter 1 (Background of the Study)."],
+ ["4.2","researchQuestion","Tentative research question","One question that follows from items 1 to 3."],
+ ["4.3","hypothesis","Tentative research hypothesis","A testable statement that follows from the question."],
+ ["4.4","objective","Tentative research objective","An overall goal and specific objectives a, b and c."]];
+  var cards=qs.map(function(q){return '<div class="card"><h3><span class="num">'+q[0]+'</span> '+esc(q[2])+'</h3><p class="sub">'+esc(q[3])+'</p><textarea data-bind="synth||'+q[1]+'">'+esc(sy[q[1]]||"")+'</textarea></div>'}).join("");
+  return '<h1 class="view-title">Synthesis</h1><p class="lede">Items 1 to 4 of the review worksheet, answered from your library. Claude drafts them from the fields you extracted; edit freely, because the review draft builds on these answers.</p>'+noClaude()+
+   (n===0?'<div class="notice">Add at least one paper before drafting the synthesis.</div>':"")+
+   '<div class="card"><h3>Your topic</h3><p class="sub">One line on what your paper is about, or your working research question.</p><input type="text" data-bind="project||topic" value="'+esc(S.project.topic)+'" placeholder="Example: How social media use affects employee productivity in remote teams"></div>'+
+   '<div class="toolbar"><button class="btn" data-act="gen-synth"'+((!cap.sample||!n||busy)?" disabled":"")+'>'+(busy?"Drafting...":"Draft synthesis from "+n+" paper"+(n===1?"":"s"))+'</button>'+(busy?'<button class="btn ghost" data-act="stop">Stop</button>':"")+'<span class="sp"></span><button class="btn sm ghost" data-act="tab" data-v="review">Next: Review</button></div>'+
+   '<div id="synerr"></div>'+cards;
+}
+
+function mdToHtml(md){
+  var lines=String(md||"").split("\n"),out=[],para=[],list=false;
+  function inl(s){return esc(s).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g,"$1<em>$2</em>")}
+  function flush(){if(para.length){var ps=para.join(" ");out.push((/^\*\*H\d/.test(ps)?'<p class="hyp">':"<p>")+inl(ps)+"</p>");para=[]}}
+  function endList(){if(list){out.push("</ul>");list=false}}
+  lines.forEach(function(l){
+    var m;
+    if((m=/^(#{1,3})\s+(.*)$/.exec(l))){flush();endList();var lv=m[1].length>=3?3:2;out.push("<h"+lv+">"+inl(m[2])+"</h"+lv+">")}
+    else if((m=/^\s*[-*]\s+(.*)$/.exec(l))){flush();if(!list){out.push("<ul>");list=true}out.push("<li>"+inl(m[1])+"</li>")}
+    else if(!l.trim()){flush();endList()}
+    else{endList();para.push(l.trim())}
+  });
+  flush();endList();return out.join("\n");
+}
+function firstAuthor(p){return (p.inText||"").split(/,|&| and /)[0]||(p.authors||"").split(",")[0]||""}
+function refList(){
+  return included().map(function(p){
+    return p.citation&&!/^not stated/i.test(p.citation)?p.citation:[p.authors,p.year?"("+p.year+").":"",p.title?p.title+".":"",p.journal].filter(Boolean).join(" ");
+  }).filter(Boolean).sort(function(a,b){return a.localeCompare(b)});
+}
+function short(s,n){s=(s||"").replace(/\s+/g," ").trim();return s.length>n?s.slice(0,n-1)+"…":s}
+function mapRows(){
+  return included().map(function(p){return [p.inText||firstAuthor(p)+", "+p.year,short(p.methodology,140),short(p.sample||p.context,140),short(p.findings,220)]});
+}
+function viewReview(){
+  var pr=S.project,n=included().length,unchecked=included().filter(function(p){return !p.verified}).length,busy=S.busy.review;
+  var hasSyn=Object.keys(pr.synth).some(function(k){return pr.synth[k]&&pr.synth[k].trim()});
+  var body;
+  if(S.reviewMode==="preview"&&!busy)body='<div class="prose">'+(pr.review?mdToHtml(pr.review):"<p>Nothing drafted yet.</p>")+'</div>';
+  else body='<textarea class="ms" id="reviewBody" data-bind="project||review" placeholder="The draft appears here. You can also type or paste your own text and use the tools below.">'+esc(pr.review)+'</textarea>';
+  var refs=refList();
+  var map0=rows.length?'<div class="tablewrap" style="margin-top:8px"><table class="lmap"><thead><tr><th>Source</th><th>Methodology</th><th>Sample or context</th><th>Key findings</th></tr></thead><tbody>'+rows.map(function(r){return "<tr>"+r.map(function(c){return "<td>"+esc(c)+"</td>"}).join("")+"</tr>"}).join("")+'</tbody></table></div>':"";
+  return '<h1 class="view-title">Review</h1><p class="lede">The draft follows the course template and is written only from the notes in your library. Tables and references are built from the same records. Aim for about 15 to 25% of your whole paper.</p>'+noClaude()+
+  (n&&unchecked?'<div class="notice">'+unchecked+' of '+n+' papers in the review are not marked as checked yet. Check them in the library first if you can.</div>':"")+
+  (!n?'<div class="notice">Add papers to the library first. The review has nothing to draw on yet.</div>':"")+
+  '<div class="card"><h3>Draft settings</h3><div class="opts">'+
+   '<label class="o">Topic or research question<input type="text" data-bind="project||topic" value="'+esc(pr.topic)+'" placeholder="What your paper is about"></label>'+
+   '<label class="o">Length<select data-bind="project||length"><option value="800"'+(pr.length==="800"?" selected":"")+'>About 800 words</option><option value="1500"'+(pr.length==="1500"?" selected":"")+'>About 1,500 words</option><option value="2500"'+(pr.length==="2500"?" selected":"")+'>About 2,500 words</option><option value="4000"'+(pr.length==="4000"?" selected":"")+'>About 4,000 words</option></select></label></div>'+
+   '<div class="opts"><label class="radio"><input type="radio" name="struct" data-struct="template"'+(pr.structure==="template"?" checked":"")+'><span>Full review in 6 parts<small>Introduction, Theoretical frameworks, Context, Variables, Hypotheses and justification, Synthesis, then Table 1 and Table 2</small></span></label>'+
+   '<label class="radio"><input type="radio" name="struct" data-struct="chapter"'+(pr.structure==="chapter"?" checked":"")+'><span>Study by study (Chapter 2)<small>Introduction, one paragraph per study, the research gap, then the summary table</small></span></label>'+
+   '<label class="radio"><input type="radio" name="struct" data-struct="thematic"'+(pr.structure==="thematic"?" checked":"")+'><span>By theme<small>Introduction, one section per theme, gaps, conclusion</small></span></label></div>'+
+   '<div class="opts"><label class="o">Your theories and variables (optional)<input type="text" data-bind="project||frame" value="'+esc(pr.frame)+'" placeholder="Example: Theory: planned behavior. Latent: financial literacy. Moderating: trust"></label>'+
+   '<label class="radio"><input type="checkbox" data-quant="1"'+(pr.quant!==false?" checked":"")+'><span>Quantitative study with hypotheses<small>Adds the hypotheses section and Table 2</small></span></label></div>'+
+   '<label class="o" style="display:flex;flex-direction:column;gap:4px;font-weight:500">Extra instructions (optional)<input type="text" data-bind="project||extra" value="'+esc(pr.extra)+'" placeholder="Example: use a formal tone, emphasize studies after 2018"></label>'+
+   '<div class="row" style="margin-top:14px"><button class="btn" data-act="gen-review"'+((!cap.sample||!n||busy)?" disabled":"")+'>'+(busy?"Writing...":(pr.review?"Redraft the review":"Draft the review"))+'</button>'+(busy?'<button class="btn ghost" data-act="stop">Stop</button>':"")+
+   (pr.prevReview&&!busy?'<button class="btn ghost" data-act="restore">Restore previous draft</button>':"")+
+   (!hasSyn&&n?'<span class="label">Tip: draft the synthesis first for a sharper argument</span>':"")+'</div><div id="reverr"></div></div>'+
+  '<div class="toolbar"><div class="seg"><button data-act="rmode" data-m="edit" aria-pressed="'+(S.reviewMode==="edit")+'">Edit</button><button data-act="rmode" data-m="preview" aria-pressed="'+(S.reviewMode==="preview")+'">Preview</button></div><span class="sp"></span>'+
+   '<button class="btn ghost sm" data-act="copy">Copy all</button><button class="btn ghost sm" data-act="dl-md">Download .md</button><button class="btn sm" data-act="dl-html">Download for Word (.html)</button></div>'+
+  body+
+  tablesView()+
+  '<div class="card"><h3>References</h3><p class="sub">Built from field "Full reference (APA 7)", sorted A to Z. Verify each against the original.</p>'+(refs.length?'<ul class="refs">'+refs.map(function(r){return "<li>"+esc(r)+"</li>"}).join("")+'</ul>':'<p class="sub">No references yet.</p>')+'</div>';
+}
+
+/* ---------- synthesis + review generation ---------- */
+async function genSynth(){
+  var pr=S.project,papers=included().map(paperBrief);
+  S.busy.synth=true;render();ctl=new AbortController();
+  var prompt="You are helping a student synthesize the literature for a literature review. Work ONLY from the structured notes below (one object per paper; `cite` is its in-text citation). Do not add outside studies. Cite studies as (cite) in parentheses, for example (Smith, 2021).\n\n"+
+   "Student topic: "+(pr.topic||"(not given; infer a sensible topic from the papers)")+"\n\n"+
+   "Return one JSON object with exactly these string keys. Each value is plain text, using short hyphen-led bullet lines where a list helps:\n"+
+   "themes: themes or patterns across the studies, with which studies support each\n"+
+   "gaps: gaps and inconsistencies (methods, regions, time periods, neglected topics, conflicting findings)\n"+
+   "recommendations: what the authors recommend for future research, merged across papers\n"+
+   "theoreticalArgument: four lettered paragraphs separated by blank lines. a. why the topic matters and the factors that influence it; b. what previous studies show, with citations; c. the research gap, ending with \"Therefore, the research question for this study is:\" and the question; d. the aim of the study and its possible implications\n"+
+   "researchQuestion: one tentative research question that follows from the themes, gaps and recommendations\n"+
+   "hypothesis: one tentative research hypothesis, as a testable statement\n"+
+   "objective: \"The overall goal of this research is to ...\" followed by \"Specifically,\" and three lines starting a), b) and c) that each begin with \"To\"\n\n"+
+   "Return JSON only.\n\nPAPERS:\n"+JSON.stringify(papers);
+  try{
+    var d=await cap.sample.json(prompt,{signal:ctl.signal,modelTier:"default"});
+    ["themes","gaps","recommendations","theoreticalArgument","researchQuestion","hypothesis","objective"].forEach(function(k){if(d&&d[k]!=null)S.project.synth[k]=flat(d[k])});
+    saveProject();
+    S.busy.synth=false;render();
+  }catch(e){S.busy.synth=false;render();var el=$("#synerr");if(el)el.innerHTML='<div class="notice err">'+esc(errCopy(e))+'</div>'}
+  ctl=null;
+}
+function structureText(kind,quant){
+  if(kind==="thematic")return "Synthesize rather than summarize paper by paper: group studies, compare them, and say where they agree or conflict. Use these markdown headings in this order:\n## Introduction (purpose of the review and how it is organized)\n## one `##` section per theme, using the papers' `theme` values and the synthesis themes\n## Gaps in the Literature\n## Conclusion (how the gaps lead to the student's research question)";
+  if(kind==="chapter")return "Use this markdown heading:\n## Literature Review of Related Studies\nUnder it write: (1) an opening paragraph on why the topic matters, what the review covers, and its aim of showing the current state of knowledge and the gaps; (2) one paragraph per study, each opening with the authors as the subject, for example Smith et al. (2021) used [method] to [question]; then the sample or scope, the key findings with numbers where the notes give them, and the authors' recommendation; link neighbouring studies with short sentences; (3) a closing paragraph stating the research gap that the student's study addresses, in the form Despite ..., there is still a gap in ...";
+  return "Write in the third person, calling the student \"the researcher\". Synthesize rather than summarize paper by paper. Start with one unheaded introductory paragraph (2 to 4 sentences): the chapter presents the literature and studies relevant to the topic, gathered to help the researcher answer the problems of the study and analyze its results. Then use these markdown headings in this order:\n## Theoretical Frameworks Used (a short opening paragraph on how the theories set the scope of the study, then one ### subheading per theory: its central proposition, key components, sources, and how it supports the present study)\n## Context of the Study (definitions from different viewpoints, then categories or types, then the specific setting)\n## Latent Variables of the Study (a short opening paragraph naming the constructs in the order of the research model, then one ### subheading per variable: definitions and who gave them, indicators, what studies found)\n## Moderating Variables of the Study (same pattern; if the notes name no moderating variable, write a [note to self: ...])\n"+(quant?"## Research Hypotheses and Their Justification (a short opening sentence, then for each relationship: supporting studies, then \"However,\" studies that conflict, then \"the researcher hypothesized that:\" and a separate line exactly like **H1a.** *Statement.* Label hypotheses H1a, H1b, H2a and so on, grouped by independent variable)\n":"")+"## Synthesis of the Reviewed Literature and Studies (one paragraph: what the study examines, that it rests on the reviewed literature, and the theories that serve as framework)";
+}
+async function genReview(){
+  var pr=S.project,papers=included().map(paperBrief),sy=pr.synth;
+  pr.prevReview=pr.review||pr.prevReview||"";
+  S.busy.review=true;S.reviewMode="edit";pr.review="";render();ctl=new AbortController();
+  var prompt="You are helping a student write the Review of Related Literature for their research paper. Write ONLY from the notes below. Do not introduce studies, statistics or claims that are not in the notes. Cite every claim in text with the paper's `cite` value in parentheses, for example (Smith et al., 2021). If the notes do not cover something the structure asks for, write a short [note to self: ...] in brackets instead of inventing content. You may name studies as the subject of a sentence, for example Smith et al. (2021) found that. Use academic prose in the third person. Do not include a reference list or a table (they are added automatically).\n\n"+
+   "Topic: "+(pr.topic||"(infer from the notes)")+"\n"+
+   "Target length: about "+pr.length+" words.\n"+
+   (pr.extra?"Extra instructions from the student: "+pr.extra+"\n":"")+
+   "\nStudent's synthesis notes (use these to shape the argument):\n"+
+   "Themes: "+(sy.themes||"n/a")+"\nGaps: "+(sy.gaps||"n/a")+"\nFuture research recommendations: "+(sy.recommendations||"n/a")+"\nTheoretical argument: "+(sy.theoreticalArgument||"n/a")+"\nResearch question: "+(sy.researchQuestion||"n/a")+"\nHypothesis: "+(sy.hypothesis||"n/a")+"\nObjective: "+(sy.objective||"n/a")+"\nTheories and variables named by the student: "+(pr.frame||"(infer from the notes)")+"\n\n"+
+   structureText(pr.structure,pr.quant!==false)+"\n\nReturn markdown only, with no preamble.\n\nPAPER NOTES (JSON):\n"+JSON.stringify(papers);
+  try{
+    var r=await cap.sample(prompt,{signal:ctl.signal,modelTier:"default",cache:false,onText:function(o){pr.review=o.text;var ta=$("#reviewBody");if(ta){ta.value=o.text;grow(ta)}}});
+    pr.review=r.text;
+    S.busy.review=false;saveProject();render();
+    if(!r.truncated&&pr.structure==="template")await genTables();
+    if(r.truncated){var el=$("#reverr");if(el)el.innerHTML='<div class="notice">The draft was cut short. Pick a shorter length or redraft one section at a time.</div>'}
+  }catch(e){
+    if(e&&e.text)pr.review=e.text;else if(e&&e.code==="cancelled"&&!pr.review)pr.review=pr.prevReview;
+    S.busy.review=false;saveProject();render();
+    var el2=$("#reverr");if(el2&&!(e&&e.code==="cancelled"))el2.innerHTML='<div class="notice err">'+esc(errCopy(e))+'</div>';
+  }
+  ctl=null;
+}
+
+/* ---------- guidelines, tables ---------- */
+function emptySyn(){return {themes:"",gaps:"",recommendations:"",theoreticalArgument:"",researchQuestion:"",hypothesis:"",objective:""}}
+function topicBox(){return '<div class="card"><h3>Research topic</h3><p class="sub">Example: Horizontal wind turbine. Everything downstream stays focused on this.</p><input type="text" data-bind="project||topic" value="'+esc(S.project.topic)+'" placeholder="Your research topic or question"></div>'}
+function old(p){var y=parseInt(p.year,10);return y&&y<new Date().getFullYear()-10}
+function guidePanel(){
+  var inc=included(),n=inc.length,rec=inc.filter(function(p){return !old(p)}).length,cr=inc.filter(function(p){return (p.credibility||"").trim()}).length,
+   sr=inc.filter(function(p){return /systematic review|meta-analys/i.test((p.title||"")+" "+(p.methodology||""))}).length;
+  var g=[["Identify your research question",S.project.topic?"Topic is set.":"Set your topic on the Add papers step."],["Use academic databases","Prefer peer-reviewed sources such as JSTOR, Google Scholar and PubMed."],["Use relevant keywords","Search with the terms in your topic."],["Check relevance","Untick “Use in the review” for papers that are off topic."],["Consider the authors’ credentials","Check their institutions."],["Check the publication date",rec+" of "+n+" papers are within the last 10 years."],["Check the journal’s impact factor",cr+" of "+n+" have a credibility note."],["Look for systematic reviews and meta-analyses",sr+" found in your library."]];
+  return '<details class="paste" style="margin-bottom:16px"><summary>Selection guidelines for your sources</summary><ol style="margin:10px 0 0;padding-left:20px">'+g.map(function(x){return '<li><strong>'+esc(x[0])+'.</strong> <span style="color:var(--muted)">'+esc(x[1])+'</span></li>'}).join("")+'</ol></details>';
+}
+var T1G=["Theoretical framework","Context","Latent variables","Moderating variables"];
+var CAP1="Table 1. Literature Map for the Study’s Theoretical Frameworks Used, Context, Latent Variables, and Moderating Variables",
+ INT1="Table 1 shows the summarized studies and literature that support the theories used as the framework of the study. This table also outlines the variables that will be used in the present study.",
+ CAP2="Table 2. Research Hypotheses and Their Justifications",
+ INT2="Table 2 shows the summarized studies and literature that the researcher used to establish and justify how the hypotheses of the present study were formulated.";
+function sumRows(){return included().map(function(p){return CORE.map(function(f){return p[f.k]||""})})}
+function sumTable(){var r=sumRows();return r.length?'<div class="tablewrap"><table class="lmap" style="min-width:1000px"><thead><tr>'+CORE.map(function(f){return "<th>"+esc(f.label)+"</th>"}).join("")+"</tr></thead><tbody>"+r.map(function(x){return "<tr>"+x.map(function(c){return "<td>"+esc(c)+"</td>"}).join("")+"</tr>"}).join("")+"</tbody></table></div>":'<p class="sub">No papers selected.</p>'}
+function tablesView(){
+  var pr=S.project,t=pr.tables,busy=S.busy.tables;
+  if(pr.structure!=="template")return '<div class="card" style="margin-top:18px"><h3>Summary of related studies</h3><p class="sub">The eight-field table from your library, one row per paper in the review.</p>'+sumTable()+'</div>';
+  function ta(tb,i,f,v){return '<textarea data-bind="tbl|'+tb+'|'+i+'|'+f+'">'+esc(v||"")+'</textarea>'}
+  var g="",r1=t.t1.map(function(x,i){var h="";if(x.group!==g){g=x.group;h='<tr class="gh"><th>'+esc(g)+'</th><th>Sources</th></tr>'}return h+"<tr><td>"+ta("t1",i,"item",x.item)+"</td><td>"+ta("t1",i,"sources",x.sources)+"</td></tr>"}).join("");
+  var r2=t.t2.map(function(x,i){return "<tr><td>"+ta("t2",i,"hyps",x.hyps)+"</td><td>"+ta("t2",i,"sources",x.sources)+"</td></tr>"}).join("");
+  return '<div class="card" style="margin-top:18px"><h3>Table 1 and Table 2</h3><p class="sub">Built from the draft, in the course template format. Edit any cell.</p><div class="row" style="margin-bottom:12px"><button class="btn sm" data-act="gen-tables"'+((!cap.sample||!pr.review||busy)?" disabled":"")+'>'+(busy?"Building...":(t.t1.length?"Rebuild tables":"Build tables from the draft"))+'</button></div><div id="tblerr"></div>'+
+   (t.t1.length?'<p class="sub">'+esc(INT1)+'</p><p><strong>'+esc(CAP1)+'</strong></p><div class="tablewrap"><table class="lmap"><tbody>'+r1+'</tbody></table></div>':'<p class="sub">Draft the review first, then build the tables.</p>')+
+   (t.t2.length?'<p class="sub" style="margin-top:16px">'+esc(INT2)+'</p><p><strong>'+esc(CAP2)+'</strong></p><div class="tablewrap"><table class="lmap"><thead><tr><th>Research Hypotheses</th><th>Sources</th></tr></thead><tbody>'+r2+'</tbody></table></div>':"")+'</div>';
+}
+async function genTables(){
+  var pr=S.project,papers=included().map(paperBrief);
+  if(!cap.sample||!papers.length||!pr.review)return;
+  S.busy.tables=true;render();ctl=new AbortController();
+  var prompt="Build two literature map tables for a Review of Related Literature. Use ONLY the paper notes and the draft review below. Return one JSON object shaped like {\"t1\":[{\"group\":\"Theoretical framework\",\"item\":\"Theory of planned behavior\",\"sources\":\"Ajzen, 1991; Brookes, 2021\"}],\"t2\":[{\"hyps\":\"H1a. Statement.\\nH1b. Statement.\",\"sources\":\"Smith, 2020; Lee, 2019\"}]}\n"+
+   "t1: one row per theory, context topic, latent variable and moderating variable discussed in the draft. group must be exactly one of: Theoretical framework, Context, Latent variables, Moderating variables. Keep rows in that group order and omit empty groups.\n"+
+   "t2: every hypothesis in the draft with its exact label and wording; put hypotheses that rest on the same sources in one row, separated by newlines. Use an empty list if the draft has no hypotheses.\n"+
+   "sources: in-text citations without parentheses, separated by semicolons, only those the draft uses for that item. Never add a citation that is not in the draft or the notes.\n\nDRAFT REVIEW:\n"+pr.review+"\n\nPAPER NOTES (JSON):\n"+JSON.stringify(papers);
+  try{
+    var d=await cap.sample.json(prompt,{signal:ctl.signal,modelTier:"default"});
+    var ok=function(a,ks){return Array.isArray(a)?a.map(function(x){var o={};ks.forEach(function(k){o[k]=flat(x&&x[k])});return o}):[]};
+    pr.tables={t1:ok(d&&d.t1,["group","item","sources"]),t2:pr.quant===false?[]:ok(d&&d.t2,["hyps","sources"])};
+    saveProject();S.busy.tables=false;render();
+  }catch(e){S.busy.tables=false;render();var el=$("#tblerr");if(el)el.innerHTML='<div class="notice err">'+esc(errCopy(e))+'</div>'}
+  ctl=null;
+}
+
+/* ---------- export ---------- */
+function docTitle(){return S.project.structure==="template"?"REVIEW OF LITERATURE AND STUDIES":"Review of Related Literature"}
+function tblOn(){var pr=S.project;return pr.structure==="template"&&pr.tables&&pr.tables.t1.length}
+function toMd(){
+  var pr=S.project,refs=refList(),o=["# "+docTitle(),""],c=function(s){return String(s||"").replace(/\|/g,"/").replace(/\n/g,"<br>")};
+  if(pr.topic)o.push("*"+pr.topic+"*","");
+  o.push(pr.review||"","");
+  if(tblOn()){var t=pr.tables;o.push(INT1,"","**"+CAP1+"**","");
+    T1G.forEach(function(g){var r=t.t1.filter(function(x){return x.group===g});if(r.length){o.push("| "+g+" | Sources |","|---|---|");r.forEach(function(x){o.push("| "+c(x.item)+" | "+c(x.sources)+" |")});o.push("")}});
+    if(t.t2.length){o.push(INT2,"","**"+CAP2+"**","","| Research Hypotheses | Sources |","|---|---|");t.t2.forEach(function(x){o.push("| "+c(x.hyps)+" | "+c(x.sources)+" |")});o.push("")}}
+  else if(pr.structure!=="template"){var rows=sumRows();if(rows.length){o.push("## Summary of Related Studies","","| "+CORE.map(function(f){return f.label}).join(" | ")+" |","|"+CORE.map(function(){return "---"}).join("|")+"|");rows.forEach(function(r){o.push("| "+r.map(c).join(" | ")+" |")});o.push("")}}
+  if(refs.length){o.push("## References","");refs.forEach(function(r){o.push(r+"\n")})}
+  return o.join("\n");
+}
+function toHtml(){
+  var pr=S.project,refs=refList(),br=function(s){return esc(s).replace(/\n/g,"<br>")};
+  var css="body{font-family:Arial,Helvetica,sans-serif;font-size:12pt;line-height:2;max-width:6.5in;margin:1in auto}h1{font-size:12pt;text-align:center;font-weight:bold}h2{font-size:12pt;font-weight:bold}h3{font-size:12pt;font-weight:bold;font-style:italic}p{margin:0;text-indent:.5in}p.hyp{margin-left:.5in;text-indent:0}table{border-collapse:collapse;width:100%;line-height:1.2;font-size:10pt}td,th{border:1px solid #000;padding:4px;vertical-align:top;text-align:left}th.g{background:#92D050;text-align:center}.cap{font-weight:bold;text-align:center;text-indent:0}.ref{text-indent:-.5in;margin-left:.5in}";
+  var h="<h1>"+esc(docTitle())+"</h1>"+(pr.topic?"<p style='text-indent:0;text-align:center'><em>"+esc(pr.topic)+"</em></p>":"")+mdToHtml(pr.review);
+  var g=function(a,b){return "<tr><th class='g' bgcolor='#92D050'>"+esc(a)+"</th><th class='g' bgcolor='#92D050'>"+esc(b)+"</th></tr>"};
+  if(tblOn()){var t=pr.tables;h+="<p>"+esc(INT1)+"</p><p class='cap'>"+esc(CAP1)+"</p><table>"+T1G.map(function(k){var r=t.t1.filter(function(x){return x.group===k});return r.length?g(k,"Sources")+r.map(function(x){return "<tr><td>"+br(x.item)+"</td><td>"+br(x.sources)+"</td></tr>"}).join(""):""}).join("")+"</table>";
+    if(t.t2.length)h+="<p>"+esc(INT2)+"</p><p class='cap'>"+esc(CAP2)+"</p><table>"+g("Research Hypotheses","Sources")+t.t2.map(function(x){return "<tr><td>"+br(x.hyps)+"</td><td>"+br(x.sources)+"</td></tr>"}).join("")+"</table>"}
+  else if(pr.structure!=="template"&&sumRows().length)h+="<h2>Summary of Related Studies</h2><table><tr>"+CORE.map(function(f){return "<th class='g' bgcolor='#92D050'>"+esc(f.label)+"</th>"}).join("")+"</tr>"+sumRows().map(function(r){return "<tr>"+r.map(function(c){return "<td>"+br(c)+"</td>"}).join("")+"</tr>"}).join("")+"</table>";
+  if(refs.length)h+="<h2>References</h2>"+refs.map(function(r){return "<p class='ref'>"+esc(r)+"</p>"}).join("");
+  return "<!doctype html><html><head><meta charset='utf-8'><title>"+esc(docTitle())+"</title><style>"+css+"</style></head><body>"+h+"</body></html>";
+}
+function toCsv(){
+  var cols=CORE.concat(EXTRA.filter(function(f){return f.k!=="notes"}).concat([EXTRA.filter(function(f){return f.k==="notes"})[0]]));
+  function q(v){return '"'+String(v==null?"":v).replace(/"/g,'""')+'"'}
+  return [cols.map(function(c){return q(c.label)}).join(",")].concat(S.papers.map(function(p){return cols.map(function(c){return q(p[c.k])}).join(",")})).join("\r\n");
+}
+async function save(name,data){
+  if(!cap.downloads){status("Downloads are not available here. Use Copy all instead.",3000);return}
+  try{await cap.downloads.save({filename:name,data:data});status("Saved "+name,2500)}
+  catch(e){if(!e||e.code!=="declined")status("Could not save the file. Use Copy all instead.",3500)}
+}
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);status("Copied",1500)}
+  catch(e){var ta=$("#reviewBody");if(ta){ta.focus();ta.select()}status("Select the text and copy it",3000)}
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",function(e){
+  var t=e.target.closest("[data-act]");if(!t)return;
+  var a=t.dataset.act;
+  if(a==="tab"){S.view=t.dataset.v;render();window.scrollTo(0,0)}
+  else if(a==="pick"){$("#file").click()}
+  else if(a==="extract-paste"){addPaste()}
+  else if(a==="manual"){var p=newPaper({},"");p.title="New paper";S.papers.push(p);savePaper(p);S.sel=p.id;S.view="library";S.libMode="list";render()}
+  else if(a==="stopjobs"||a==="stop"){if(ctl)ctl.abort();queue.length=0}
+  else if(a==="clearjobs"){S.jobs=S.jobs.filter(function(j){return j.state==="run"||j.state==="wait"});renderJobs()}
+  else if(a==="open"){S.sel=t.dataset.id;S.view="library";S.libMode="list";S.armed=null;render();if(window.innerWidth<860){var ed=$(".editor");if(ed)ed.scrollIntoView()}}
+  else if(a==="mode"){S.libMode=t.dataset.m;render()}
+  else if(a==="del"){
+    var id=t.dataset.id;
+    if(S.armed===id){S.armed=null;removePaper(id);S.sel=null;render()}
+    else{S.armed=id;render();clearTimeout(del.t);del.t=setTimeout(function(){S.armed=null;if(S.view==="library")render()},4000)}
+  }
+  else if(a==="csv"){save("literature-matrix.csv",toCsv())}
+  else if(a==="gen-synth"){genSynth()}
+  else if(a==="gen-review"){genReview()}
+  else if(a==="gen-tables"){genTables()}
+  else if(a==="restore"){var cur=S.project.review;S.project.review=S.project.prevReview;S.project.prevReview=cur;saveProject();render()}
+  else if(a==="rmode"){S.reviewMode=t.dataset.m;render()}
+  else if(a==="copy"){copyText(toMd())}
+  else if(a==="dl-md"){save("literature-review.md",toMd())}
+  else if(a==="dl-html"){save("literature-review.html",toHtml())}
+});
+function del(){}
+document.addEventListener("input",function(e){
+  var t=e.target,b=t.dataset&&t.dataset.bind;if(!b)return;
+  var parts=b.split("|"),kind=parts[0],id=parts[1],f=parts[2];
+  if(kind==="paper"){var p=getP(id);if(!p)return;p[f]=t.value;p.updatedAt=Date.now();savePaper(p);
+    if(f==="title"||f==="authors"||f==="year"||f==="inText"){var h=$(".editor h2");if(f==="title"&&h)h.textContent=t.value||"Untitled paper";var pl=$(".plist");if(pl)pl.innerHTML=S.papers.map(pitem).join("")}}
+  else if(kind==="project"){S.project[f]=t.value;saveProject()}
+  else if(kind==="tbl"){var rw=S.project.tables[id][+f];if(rw){rw[parts[3]]=t.value;saveProject()}}
+  else if(kind==="synth"){S.project.synth[f]=t.value;saveProject()}
+  if(t.tagName==="TEXTAREA")grow(t);
+});
+document.addEventListener("change",function(e){
+  var t=e.target;
+  if(t.dataset&&t.dataset.chk){var p=getP(t.dataset.id);if(!p)return;p[t.dataset.chk]=t.checked;savePaper(p);var pl=$(".plist");if(pl)pl.innerHTML=S.papers.map(pitem).join("");renderNav()}
+  else if(t.dataset&&t.dataset.struct){S.project.structure=t.dataset.struct;saveProject();render()}
+  else if(t.dataset&&t.dataset.quant){S.project.quant=t.checked;saveProject();render()}
+  else if(t.id==="file"){addJobs(Array.prototype.slice.call(t.files||[]));t.value="";if(S.view!=="add"){S.view="add";render()}}
+  else if(t.dataset&&t.dataset.bind){var b=t.dataset.bind.split("|");if(b[0]==="project"){S.project[b[2]]=t.value;saveProject()}}
+});
+
+render();
+initCaps();
+})();
+</script>
+
+</body></html>
